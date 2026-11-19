@@ -1,3 +1,7 @@
 node_modules/
 dist/
 *.tsbuildinfo
+/.cache/
+/.contract-source/
+/sa2
+/sa2.exe
