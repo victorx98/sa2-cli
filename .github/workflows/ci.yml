@@ -27,7 +27,6 @@ jobs:
           - { runner: macos-15-intel, platform: darwin-amd64, cgo: '1' }
           - { runner: macos-15, platform: darwin-arm64, cgo: '1' }
           - { runner: windows-2025, platform: windows-amd64, cgo: '0', suffix: .exe }
-          - { runner: windows-11-arm, platform: windows-arm64, cgo: '0', suffix: .exe }
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v6
