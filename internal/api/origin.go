@@ -9,20 +9,24 @@ import (
 	"strings"
 )
 
-var ErrInvalidOrigin = errors.New("invalid HTTPS origin")
+var ErrInvalidOrigin = errors.New("invalid API origin")
 
 var dnsLabel = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
 func Origin(value string) (string, error) {
 	u, err := url.Parse(value)
-	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil ||
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.User != nil ||
 		strings.ContainsAny(value, "?#") || (u.Path != "" && u.Path != "/") ||
 		u.RawPath != "" || strings.HasSuffix(u.Host, ":") {
 		return "", ErrInvalidOrigin
 	}
 
 	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
-	if addr, err := netip.ParseAddr(host); err == nil && addr.Zone() == "" {
+	addr, addrErr := netip.ParseAddr(host)
+	if u.Scheme == "http" && host != "localhost" && !addr.IsLoopback() {
+		return "", ErrInvalidOrigin
+	}
+	if addrErr == nil && addr.Zone() == "" {
 		host = addr.String()
 		if addr.Is6() {
 			host = "[" + host + "]"
@@ -43,9 +47,13 @@ func Origin(value string) (string, error) {
 		if err != nil || number == 0 {
 			return "", ErrInvalidOrigin
 		}
-		if number != 443 {
+		defaultPort := uint64(443)
+		if u.Scheme == "http" {
+			defaultPort = 80
+		}
+		if number != defaultPort {
 			host += ":" + strconv.FormatUint(number, 10)
 		}
 	}
-	return "https://" + host, nil
+	return u.Scheme + "://" + host, nil
 }

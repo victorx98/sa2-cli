@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"io"
+	"time"
 
 	"github.com/victorx98/sa2-cli/internal/api"
 	"github.com/victorx98/sa2-cli/internal/session"
@@ -24,6 +27,54 @@ type Service struct {
 }
 
 func (s Service) Login(ctx context.Context, origin, email string, password func(context.Context) ([]byte, error)) (api.Identity, error) {
+	return s.login(ctx, origin, func() (api.Result, error) {
+		secret, err := password(ctx)
+		defer clear(secret)
+		if err != nil {
+			return api.Result{}, err
+		}
+		return s.API.Login(ctx, origin, email, secret)
+	})
+}
+
+func (s Service) FeishuLogin(ctx context.Context, origin string, out io.Writer) (api.Identity, error) {
+	return s.login(ctx, origin, func() (api.Result, error) {
+		started := time.Now()
+		grant, err := s.API.StartFeishuDevice(ctx, origin)
+		if err != nil {
+			return api.Result{}, err
+		}
+		ctx, cancel := context.WithDeadline(ctx, started.Add(time.Duration(grant.ExpiresIn)*time.Second))
+		defer cancel()
+		if _, err := fmt.Fprintf(out, "Open this Feishu URL on any device and verify code %s:\n%s\n", grant.UserCode, grant.VerificationURI); err != nil {
+			return api.Result{}, err
+		}
+
+		interval := grant.Interval
+		for {
+			timer := time.NewTimer(time.Duration(interval) * time.Second)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return api.Result{}, ctx.Err()
+			case <-timer.C:
+			}
+			result, next, err := s.API.PollFeishuDevice(ctx, origin, grant.Credential)
+			if err != nil {
+				if ctx.Err() != nil {
+					return api.Result{}, ctx.Err()
+				}
+				return api.Result{}, err
+			}
+			if next == 0 {
+				return result, nil
+			}
+			interval = next
+		}
+	})
+}
+
+func (s Service) login(ctx context.Context, origin string, exchange func() (api.Result, error)) (api.Identity, error) {
 	key := session.Key(origin)
 	unlock, err := s.Locks.Acquire(ctx, key)
 	if err != nil {
@@ -37,13 +88,7 @@ func (s Service) Login(ctx context.Context, origin, email string, password func(
 		return api.Identity{}, session.ErrUnavailable
 	}
 
-	secret, err := password(ctx)
-	defer clear(secret)
-	if err != nil {
-		return api.Identity{}, err
-	}
-	result, err := s.API.Login(ctx, origin, email, secret)
-	clear(secret)
+	result, err := exchange()
 	if err != nil {
 		if ctx.Err() != nil {
 			return api.Identity{}, ctx.Err()
