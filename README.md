@@ -6,6 +6,8 @@
 
 从发行页下载对应 macOS、Windows 或 Linux 的归档，核对 `checksums.txt` 后解压。也可以用 Go 1.27.4 从源码构建。在 macOS 上使用原生构建环境和 `CGO_ENABLED=1`，链接系统 Security framework。
 
+发行归档提供 Linux 和 macOS 的 amd64、arm64 版本，以及 Windows amd64 版本。
+
 ```sh
 go build -trimpath -o sa2 ./cmd/sa2
 ./sa2 --help
