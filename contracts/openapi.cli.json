@@ -1,0 +1,220 @@
+{
+  "components": {
+    "schemas": {
+      "AuthResponseDto": {
+        "properties": {
+          "accessToken": {
+            "description": "JWT access token",
+            "type": "string"
+          },
+          "expiresIn": {
+            "description": "Access token TTL in seconds",
+            "example": 3600,
+            "type": "number"
+          },
+          "refreshToken": {
+            "description": "JWT refresh token",
+            "type": "string"
+          },
+          "tokenType": {
+            "description": "Token type (usually Bearer)",
+            "example": "Bearer",
+            "type": "string"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthUserResponseDto"
+              }
+            ],
+            "description": "Authenticated user profile"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn",
+          "tokenType",
+          "user"
+        ],
+        "type": "object"
+      },
+      "AuthUserResponseDto": {
+        "properties": {
+          "email": {
+            "description": "User email address",
+            "type": "string"
+          },
+          "id": {
+            "description": "Supabase user ID",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "type": "string"
+          },
+          "nameZh": {
+            "description": "Chinese name",
+            "type": "string"
+          },
+          "roles": {
+            "description": "Roles granted to the user",
+            "example": [
+              {
+                "cnName": "学生",
+                "enName": "student",
+                "id": "f61a6d57-e19a-4d38-9e9e-0c9a3a5b83c9"
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/UserRoleResponseDto"
+            },
+            "type": "array"
+          },
+          "status": {
+            "description": "Account status (e.g., active, suspended)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "roles"
+        ],
+        "type": "object"
+      },
+      "LoginDto": {
+        "properties": {
+          "email": {
+            "description": "User email address",
+            "example": "counselor3@123.com",
+            "type": "string"
+          },
+          "password": {
+            "description": "User password",
+            "example": "123456",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object"
+      },
+      "RefreshSessionDto": {
+        "properties": {
+          "refreshToken": {
+            "description": "Refresh token for an existing session",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object"
+      },
+      "UserRoleResponseDto": {
+        "properties": {
+          "cnName": {
+            "description": "Chinese role name",
+            "type": "string"
+          },
+          "enName": {
+            "description": "English role name",
+            "type": "string"
+          },
+          "id": {
+            "description": "Role ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "enName",
+          "cnName"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "MentorX backend OpenAPI specification",
+    "title": "MentorX API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            },
+            "description": "Login successful"
+          }
+        },
+        "summary": "User login",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            },
+            "description": "Session refreshed"
+          },
+          "401": {
+            "description": "Session invalid or account is ineligible"
+          },
+          "503": {
+            "description": "Authentication service unavailable"
+          }
+        },
+        "summary": "Refresh authentication session",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    }
+  }
+}

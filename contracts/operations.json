@@ -1,0 +1,4 @@
+[
+  {"method": "post", "path": "/api/auth/login"},
+  {"method": "post", "path": "/api/auth/refresh"}
+]

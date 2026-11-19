@@ -1,6 +1,17 @@
 name: CLI checks
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+    inputs:
+      package:
+        type: boolean
+        default: false
+    secrets:
+      SA2_API_READ_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -10,15 +21,117 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - { runner: ubuntu-24.04, platform: linux-amd64, cgo: '0' }
+          - { runner: ubuntu-24.04-arm, platform: linux-arm64, cgo: '0' }
+          - { runner: macos-15-intel, platform: darwin-amd64, cgo: '1' }
+          - { runner: macos-15, platform: darwin-arm64, cgo: '1' }
+          - { runner: windows-2025, platform: windows-amd64, cgo: '0', suffix: .exe }
+          - { runner: windows-11-arm, platform: windows-arm64, cgo: '0', suffix: .exe }
+    runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
         with:
-          node-version: "22"
-          cache: npm
-      - run: npm ci
-      - run: npm run openapi:generate
-      - run: git diff --exit-code -- packages/core/src/api/generated/types.ts
-      - run: npm test
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Check formatting and contracts
+        shell: bash
+        run: |
+          unformatted=$(gofmt -l cmd internal tools)
+          if [[ -n "$unformatted" ]]; then
+            printf '%s\n' "$unformatted"
+            exit 1
+          fi
+          go mod tidy -diff
+          go run ./tools/contract -check
+      - run: go vet ./...
+      - run: go test -count=1 ./...
+      - if: runner.os != 'Windows'
+        run: go test -race -count=1 ./...
+      - name: Test GNOME Keyring on a private session bus
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dbus gnome-keyring
+          bash scripts/test-linux-keyring.sh
+      - name: Test macOS Keychain
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p .cache
+          sa2_keychain_dir=$(mktemp -d "$PWD/.cache/keychain.XXXXXX")
+          sa2_keychain="$sa2_keychain_dir/test.keychain-db"
+          sa2_original=$(security default-keychain -d user 2>/dev/null || true)
+          sa2_original=$(printf '%s' "$sa2_original" | sed -e 's/^[[:space:]]*"//' -e 's/"$//')
+          cleanup() {
+            if [[ -n "$sa2_original" ]]; then
+              security default-keychain -d user -s "$sa2_original"
+            fi
+            security delete-keychain "$sa2_keychain"
+            rmdir "$sa2_keychain_dir"
+          }
+          trap cleanup EXIT
+          sa2_test_password=$(uuidgen)
+          security create-keychain -p "$sa2_test_password" "$sa2_keychain"
+          security unlock-keychain -p "$sa2_test_password" "$sa2_keychain"
+          security default-keychain -d user -s "$sa2_keychain"
+          SA2_TEST_NATIVE_VAULT=1 go test -count=1 ./internal/session -run '^TestNativeVault$'
+      - name: Test Windows Credential Manager
+        if: runner.os == 'Windows'
+        env:
+          SA2_TEST_NATIVE_VAULT: '1'
+        run: go test -count=1 ./internal/session -run "^TestNativeVault$"
+      - name: Build and run the executable
+        shell: bash
+        env:
+          CGO_ENABLED: ${{ matrix.cgo }}
+          SA2_BINARY: sa2${{ matrix.suffix }}
+        run: |
+          mkdir -p dist
+          sa2_version=dev
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            sa2_version="$GITHUB_REF_NAME"
+          fi
+          go build -trimpath -ldflags "-X main.version=$sa2_version" -o "dist/$SA2_BINARY" ./cmd/sa2
+          test "$(./dist/"$SA2_BINARY" --version | tr -d '\r')" = "$sa2_version"
+          ./dist/"$SA2_BINARY" --help
+      - name: Package release candidate
+        if: inputs.package
+        shell: bash
+        env:
+          SA2_PLATFORM: ${{ matrix.platform }}
+          SA2_BINARY: sa2${{ matrix.suffix }}
+        run: tar -czf "dist/sa2_${GITHUB_REF_NAME}_$SA2_PLATFORM.tar.gz" -C dist "$SA2_BINARY"
+      - uses: actions/upload-artifact@v6
+        if: inputs.package
+        with:
+          name: sa2-${{ matrix.platform }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  upstream-contract:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Read the pinned API source
+        id: source
+        run: jq -r '"repository="+.repository, "commit="+.commit' contracts/source.json >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.source.outputs.repository }}
+          ref: ${{ steps.source.outputs.commit }}
+          token: ${{ secrets.SA2_API_READ_TOKEN || github.token }}
+          path: .contract-source
+          persist-credentials: false
+      - name: Verify the upstream blob and projection
+        run: |
+          api_document=$(jq -r .path contracts/source.json)
+          go run ./tools/contract -check -source ".contract-source/$api_document"
