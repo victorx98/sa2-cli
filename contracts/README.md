@@ -19,4 +19,4 @@ go run ./tools/contract -source .cache/api-openapi.json
 go run ./tools/contract -check -source .cache/api-openapi.json
 ```
 
-PR 检查子集形态和本地测试。主分支与发行候选显式检出固定的 API 提交并校验 blob 和子集。手动更新上游版本时审查生成的差异并复验请求、响应和错误映射。
+PR 检查子集形态并运行测试。主分支 CI 检出固定的 API 提交并校验 blob 和子集。手动发布前核对目标提交的 CI 结果。更新上游版本时审查生成的差异并复验请求、响应和错误映射。

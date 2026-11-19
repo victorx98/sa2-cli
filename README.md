@@ -43,7 +43,7 @@ Go 版使用独立凭据命名空间。切换前在旧版对使用过的各 orig
 
 将 [agent-cli-usage](./skills/agent-cli-usage/SKILL.md) 所在目录按 Agent 宿主支持的方式注册，再为宿主提供已安装的 `sa2` 和对应的 OS 凭据库。Skill 说明输入模式、结果解析和失败恢复。
 
-## 开发与发布
+## 开发
 
 从本仓库执行以下检查。集成测试启动本地 HTTPS 模拟 API。
 
@@ -55,6 +55,43 @@ go run ./tools/contract -check
 
 Linux 原生凭据测试使用隔离的 D-Bus 和 GNOME Keyring。安装这两个测试依赖后，运行 `bash scripts/test-linux-keyring.sh`。CI 在 macOS 和 Windows 上也运行各自的原生凭据测试。
 
-API 来源和更新步骤见 [OpenAPI 契约](./contracts/README.md)。主分支与发行候选检查需能读取固定的 API 提交，私有上游可配置只读 `SA2_API_READ_TOKEN`。维护者打发行 tag 后，CI 创建包含归档、校验和与 Skill 的草稿发行。正式发布前在预发布检查目标宿主的认证链路和峰值续期负载。
+主分支 CI 需能读取固定的 API 提交，私有上游可配置只读 `SA2_API_READ_TOKEN`。 [OpenAPI 契约](./contracts/README.md)
+
+## 手动发布
+
+1. 确认目标提交的 CI 已通过，在预发布验证目标宿主的认证链路和峰值续期负载，再由维护者创建发行 tag。
+2. 在 Linux、macOS 和 Windows 的 amd64 环境中检出同一 tag。从仓库根目录用 Bash 执行以下命令，Windows 可使用 Git Bash。
+
+   ```bash
+   set -e
+   sa2_version=$(git describe --tags --exact-match)
+   sa2_os=$(go env GOOS)
+   test "$(go env GOARCH)" = amd64
+   sa2_binary=sa2
+   sa2_cgo=0
+   case "$sa2_os" in
+     darwin) sa2_cgo=1 ;;
+     windows) sa2_binary=sa2.exe ;;
+     linux) ;;
+     *) exit 1 ;;
+   esac
+   mkdir -p dist
+   CGO_ENABLED="$sa2_cgo" go build -trimpath -ldflags "-X main.version=$sa2_version" -o "dist/$sa2_binary" ./cmd/sa2
+   test "$(./dist/"$sa2_binary" --version | tr -d '\r')" = "$sa2_version"
+   ./dist/"$sa2_binary" --help
+   tar -czf "dist/sa2_${sa2_version}_${sa2_os}-amd64.tar.gz" -C dist "$sa2_binary"
+   ```
+
+3. 将三个归档汇总到同一 tag 的 `dist/`，从仓库根目录生成 Skill 归档和校验和。
+
+   ```bash
+   set -e
+   sa2_version=$(git describe --tags --exact-match)
+   git archive --format=zip --output=dist/agent-cli-usage.zip HEAD:skills
+   cd dist
+   sha256sum "sa2_${sa2_version}_"{linux,darwin,windows}-amd64.tar.gz agent-cli-usage.zip > checksums.txt
+   ```
+
+   macOS 可将 `sha256sum` 替换为 `shasum -a 256`。在 GitHub Releases 手动选择该 tag，上传三个二进制归档、`agent-cli-usage.zip` 和 `checksums.txt`，核对附件后发布。Actions 只运行 CI 检查。
 
 实施与验收条件见 [Go 安全重构方案](./docs/plans/active/2026-11-19-go-migration.md)。

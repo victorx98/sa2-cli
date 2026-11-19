@@ -4,20 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_call:
-    inputs:
-      package:
-        type: boolean
-        default: false
-    secrets:
-      SA2_API_READ_TOKEN:
-        required: false
 
 permissions:
   contents: read
 
 jobs:
   test:
+    name: Test (${{ matrix.platform }})
     strategy:
       fail-fast: false
       matrix:
@@ -87,29 +80,12 @@ jobs:
           SA2_BINARY: sa2${{ matrix.suffix }}
         run: |
           mkdir -p dist
-          sa2_version=dev
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            sa2_version="$GITHUB_REF_NAME"
-          fi
-          go build -trimpath -ldflags "-X main.version=$sa2_version" -o "dist/$SA2_BINARY" ./cmd/sa2
-          test "$(./dist/"$SA2_BINARY" --version | tr -d '\r')" = "$sa2_version"
+          go build -trimpath -o "dist/$SA2_BINARY" ./cmd/sa2
+          test "$(./dist/"$SA2_BINARY" --version | tr -d '\r')" = dev
           ./dist/"$SA2_BINARY" --help
-      - name: Package release candidate
-        if: inputs.package
-        shell: bash
-        env:
-          SA2_PLATFORM: ${{ matrix.platform }}
-          SA2_BINARY: sa2${{ matrix.suffix }}
-        run: tar -czf "dist/sa2_${GITHUB_REF_NAME}_$SA2_PLATFORM.tar.gz" -C dist "$SA2_BINARY"
-      - uses: actions/upload-artifact@v6
-        if: inputs.package
-        with:
-          name: sa2-${{ matrix.platform }}
-          path: dist/*.tar.gz
-          if-no-files-found: error
 
   upstream-contract:
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
