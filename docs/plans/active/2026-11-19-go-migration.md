@@ -1,6 +1,6 @@
 # sa2-cli Go 安全重构方案
 
-范围限定在 `sa2-cli`。首版交付 Windows、macOS 和 Linux 的 Go 二进制，使用现有邮箱登录及刷新会话接口。旧版通过提交 `78367fe` 获取，正式切换时先在旧版退出，再在 Go 版重新登录。
+范围限定在 `sa2-cli`。首版交付 Windows、macOS 和 Linux 的 amd64 Go 二进制，使用现有邮箱登录及刷新会话接口。旧版通过提交 `78367fe` 获取，正式切换时先在旧版退出，再在 Go 版重新登录。
 
 ## 平台凭据
 
@@ -31,6 +31,6 @@
 ## 当前验证记录
 
 - Linux amd64 的 `go test ./...`、`go test -race ./...`、`go vet ./...`、隔离 GNOME Keyring 测试和伪终端取消测试已通过。
-- Windows amd64、Windows arm64 的发布源码和测试二进制已交叉编译。Linux arm64 的发布源码已交叉编译。
+- Windows amd64 的发布源码和测试二进制已交叉编译。
 - 固定上游 blob、OpenAPI 子集、命令帮助和 tag 版本注入均已验证。CI 与发行工作流通过 `actionlint`。
 - Windows、macOS 真实凭据库验收及预发布负载检查待执行，正式发布使用这些验收结果。

@@ -45,7 +45,7 @@ jobs:
         run: |
           git archive --format=zip --output=release-assets/agent-cli-usage.zip HEAD:skills
           cd release-assets
-          for platform in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64 windows-amd64; do
+          for platform in linux-amd64 darwin-amd64 windows-amd64; do
             test -s "sa2_${GITHUB_REF_NAME}_$platform.tar.gz"
           done
           sha256sum ./*.tar.gz agent-cli-usage.zip > checksums.txt
