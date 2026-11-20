@@ -13,19 +13,87 @@ go build -trimpath -o sa2 ./cmd/sa2
 ./sa2 --help
 ```
 
-Windows 源码构建使用 `go build -trimpath -o sa2.exe ./cmd/sa2`。以下示例把域名换成获准使用的 SA2 API HTTPS origin。
+Windows 源码构建使用 `go build -trimpath -o sa2.exe ./cmd/sa2`。
 
-```sh
-sa2 login --api-url https://sa2.example.com --email "<邮箱>"
-sa2 whoami --api-url https://sa2.example.com
-sa2 logout --api-url https://sa2.example.com
+## API 地址配置
+
+`sa2` 首次运行时会在当前用户的配置目录下创建 `sa2-cli/config.json`，之后每次启动都会读取。可用编辑器修改并保存这个文件，已有配置会继续使用保存的值。
+
+| 系统 | 用户配置目录 |
+| --- | --- |
+| Linux | 设置了 `XDG_CONFIG_HOME` 时使用该目录，否则使用用户主目录下的 `.config` |
+| macOS | 用户主目录下的 `Library/Application Support` |
+| Windows | `%APPDATA%` |
+
+```json
+{
+  "SA2_API_URL": "https://api.mentorx.org"
+}
 ```
 
-- `--api-url` 优先于 `SA2_API_URL`。使用纯 HTTPS origin，省略账号凭据、路径、查询和片段。
-- 登录使用隐藏终端输入。自动化使用 `--password-stdin`，由宿主的秘密管理器写入 stdin 并关闭该流。需要飞书员工认证的账号沿用 Web 流程。
-- 每次 `whoami` 都尝试续期，成功时轮换刷新令牌并返回服务端身份。续期结果不明时要求重新登录。
-- `logout` 仅清除指定 origin 的本地凭据，重复执行仍成功。
-- 业务命令的 stdout 是单行 JSON。成功读取 `data`，失败读取 `error.code` 和 `error.message`。退出码为 `0` 成功、`1` 运行失败、`2` 参数错误、`3` 认证被拒或需登录、`130` 取消。交互提示来自 stderr。
+优先级从高到低为 `--api-url`、`SA2_API_URL` 环境变量、配置文件。HTTP 只允许 `localhost` 或环回 IP，其他地址使用 HTTPS。地址可含端口，省略账号凭据、路径、查询和片段。
+
+## 命令示例
+
+### 邮箱登录
+
+```sh
+sa2 login --email 'you@example.com'
+```
+
+密码在终端提示时输入，输入内容会隐藏。自动化可从宿主秘密管理器提供的文件读取密码，`SA2_PASSWORD_FILE` 填写该文件的路径。
+
+```sh
+sa2 login --email 'you@example.com' --password-stdin < "$SA2_PASSWORD_FILE"
+```
+
+### 飞书授权及扫码登录
+
+```sh
+sa2 login --feishu
+```
+
+在任意电脑或手机打开终端显示的飞书验证链接，核对短码并完成授权。支持飞书 App 扫码的授权页面可以直接扫码。SA2 API 必须启用飞书设备授权。CLI 可在 SSH 或无浏览器的容器中运行，按 Ctrl+C 可取消。飞书登录沿用服务端的员工账号检查，设备会话自授权起最多续期七天。
+
+### 查看当前身份
+
+```sh
+sa2 whoami
+```
+
+每次执行都会尝试续期，成功后更新刷新令牌并返回用户 ID、邮箱和角色。续期结果不明时需要重新登录。
+
+```json
+{"data":{"id":"8b93fc3c-c385-43fd-bf90-bfe24a6c7faa","email":"you@example.com","roles":["student"]}}
+```
+
+### 清除本地会话
+
+```sh
+sa2 logout
+```
+
+清除当前 API 地址对应的本地凭据。重复执行也会返回 `{"data":{"loggedOut":true}}`。
+
+### 临时指定 API 地址
+
+将示例域名替换成实际环境的 HTTPS 地址。同一环境的登录、身份查询和退出使用同一个地址。
+
+```sh
+sa2 login --feishu --api-url https://sa2-staging.example.com
+sa2 whoami --api-url https://sa2-staging.example.com
+sa2 logout --api-url https://sa2-staging.example.com
+```
+
+### 查看帮助和版本
+
+```sh
+sa2 --help
+sa2 login --help
+sa2 --version
+```
+
+业务命令的 stdout 是单行 JSON。成功读取 `data`，失败读取 `error.code` 和 `error.message`。退出码为 `0` 成功、`1` 运行失败、`2` 参数错误、`3` 认证被拒或需登录、`130` 取消。交互提示来自 stderr。
 
 ## 系统凭据库
 

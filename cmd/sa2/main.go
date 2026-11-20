@@ -7,6 +7,7 @@ import (
 
 	"github.com/victorx98/sa2-cli/internal/api"
 	"github.com/victorx98/sa2-cli/internal/cli"
+	"github.com/victorx98/sa2-cli/internal/config"
 	"github.com/victorx98/sa2-cli/internal/session"
 )
 
@@ -19,7 +20,7 @@ func main() {
 		Out:         os.Stdout,
 		Err:         os.Stderr,
 		Version:     version,
-		Origin:      os.Getenv("SA2_API_URL"),
+		LoadConfig:  config.Load,
 		API:         api.Client{HTTP: api.NewHTTPClient()},
 		OpenSession: session.Open,
 	}

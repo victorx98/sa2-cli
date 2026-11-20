@@ -83,6 +83,62 @@
         ],
         "type": "object"
       },
+      "FeishuDevicePendingDto": {
+        "properties": {
+          "interval": {
+            "description": "Minimum interval before the next poll, in seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "interval"
+        ],
+        "type": "object"
+      },
+      "FeishuDevicePollDto": {
+        "properties": {
+          "credential": {
+            "description": "Opaque SA2 device authorization credential",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential"
+        ],
+        "type": "object"
+      },
+      "FeishuDeviceStartDto": {
+        "properties": {
+          "credential": {
+            "description": "Opaque SA2 device authorization credential",
+            "type": "string"
+          },
+          "expiresIn": {
+            "description": "Remaining authorization lifetime, in seconds",
+            "type": "number"
+          },
+          "interval": {
+            "description": "Minimum interval before the next poll, in seconds",
+            "type": "number"
+          },
+          "userCode": {
+            "description": "Code shown to the user",
+            "type": "string"
+          },
+          "verificationUri": {
+            "description": "Feishu verification URL",
+            "type": "string"
+          }
+        },
+        "required": [
+          "interval",
+          "credential",
+          "verificationUri",
+          "userCode",
+          "expiresIn"
+        ],
+        "type": "object"
+      },
       "LoginDto": {
         "properties": {
           "email": {
@@ -146,6 +202,91 @@
   },
   "openapi": "3.0.0",
   "paths": {
+    "/api/auth/feishu/device/poll": {
+      "post": {
+        "operationId": "AuthController_pollFeishuDevice",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeishuDevicePollDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeishuDevicePendingDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "description": "Authorization denied"
+          },
+          "403": {
+            "description": "Employee account required"
+          },
+          "409": {
+            "description": "Authorization already claimed"
+          },
+          "410": {
+            "description": "Authorization expired or invalidated"
+          },
+          "503": {
+            "description": "Device authorization unavailable"
+          }
+        },
+        "summary": "Poll Feishu device authorization",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/auth/feishu/device/start": {
+      "post": {
+        "operationId": "AuthController_startFeishuDevice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeishuDeviceStartDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "description": "Too many attempts"
+          },
+          "503": {
+            "description": "Device authorization unavailable"
+          }
+        },
+        "summary": "Start Feishu device authorization",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
     "/api/auth/login": {
       "post": {
         "operationId": "AuthController_login",

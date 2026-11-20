@@ -8,6 +8,9 @@ func TestOrigin(t *testing.T) {
 		"https://example.test.":       "https://example.test",
 		"https://127.0.0.1:8443/":     "https://127.0.0.1:8443",
 		"https://[0000::1]:8443/":     "https://[::1]:8443",
+		"http://localhost:8094":       "http://localhost:8094",
+		"http://127.0.0.1:80":         "http://127.0.0.1",
+		"http://[::1]:8094":           "http://[::1]:8094",
 	}
 	for input, want := range valid {
 		got, err := Origin(input)
@@ -16,7 +19,8 @@ func TestOrigin(t *testing.T) {
 		}
 	}
 	invalid := []string{
-		"", "http://localhost", "https://user:secret@example.test", "https://example.test/path",
+		"", "http://example.test", "http://192.168.0.1", "http://localhost.example.test",
+		"https://user:secret@example.test", "https://example.test/path",
 		"https://example.test?", "https://example.test/#", "https://example.test/%2F",
 		"https://[fe80::1%25eth0]", "https://a..b", "https://example.test:",
 		"https://example.test:65536", "https://example.test:0", "https://example.test/../",

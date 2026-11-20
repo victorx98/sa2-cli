@@ -13,17 +13,21 @@ import (
 
 	"github.com/victorx98/sa2-cli/internal/api"
 	"github.com/victorx98/sa2-cli/internal/auth"
+	"github.com/victorx98/sa2-cli/internal/config"
 	"github.com/victorx98/sa2-cli/internal/session"
 )
 
-var errArgument = errors.New("invalid command argument")
+var (
+	errArgument    = errors.New("invalid command argument")
+	errFeishuHTTPS = errors.New("Feishu device authorization requires HTTPS")
+)
 
 type App struct {
 	In          *os.File
 	Out         io.Writer
 	Err         *os.File
 	Version     string
-	Origin      string
+	LoadConfig  func() (config.Settings, error)
 	API         api.Client
 	OpenSession func(context.Context) (session.Vault, *session.Locker, error)
 }
@@ -33,23 +37,32 @@ type options struct {
 	origin    string
 	email     string
 	fromStdin bool
+	feishu    bool
 	help      bool
 	version   bool
 }
 
-const helpText = `sa2 [--api-url HTTPS_ORIGIN] <command>
+const helpText = `sa2 [--api-url ORIGIN] <command>
 
   login --email EMAIL [--password-stdin]  Sign in using an email and password
+  login --feishu                         Authorize in a browser or scan with Feishu
   whoami                                Refresh the session and show the identity
   logout                                Clear the local session for this origin
 
-  --api-url HTTPS_ORIGIN                Defaults to SA2_API_URL
+  --api-url ORIGIN                       Overrides SA2_API_URL and config.json
   --help                                Show help
   --version                             Show the CLI version
+
+  Configuration: sa2-cli/config.json in the user configuration directory
+  Default API origin: https://api.mentorx.org
 `
 
 func (a App) Run(ctx context.Context, args []string) int {
-	opts, err := parse(args, a.Origin)
+	settings, err := a.LoadConfig()
+	if err != nil {
+		return a.writeError(errorDetail{"CONFIG_ERROR", err.Error()}, 1)
+	}
+	opts, err := parse(args, settings.Origin)
 	if err != nil {
 		return a.failure(err)
 	}
@@ -66,6 +79,9 @@ func (a App) Run(ctx context.Context, args []string) int {
 	if err != nil {
 		return a.failure(err)
 	}
+	if opts.feishu && !strings.HasPrefix(origin, "https://") {
+		return a.failure(errFeishuHTTPS)
+	}
 	vault, locks, err := a.OpenSession(ctx)
 	if err != nil {
 		return a.failure(err)
@@ -75,6 +91,10 @@ func (a App) Run(ctx context.Context, args []string) int {
 
 	switch opts.command {
 	case "login":
+		if opts.feishu {
+			identity, err := service.FeishuLogin(ctx, origin, a.Err)
+			return a.result(identity, err)
+		}
 		identity, err := service.Login(ctx, origin, opts.email, func(ctx context.Context) ([]byte, error) {
 			return a.password(ctx, opts.fromStdin)
 		})
@@ -124,6 +144,7 @@ func parse(args []string, defaultOrigin string) (options, error) {
 	if opts.command == "login" {
 		command.StringVar(&opts.email, "email", "", "")
 		command.BoolVar(&opts.fromStdin, "password-stdin", false, "")
+		command.BoolVar(&opts.feishu, "feishu", false, "")
 	}
 	if err := command.Parse(root.Args()[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -136,6 +157,12 @@ func parse(args []string, defaultOrigin string) (options, error) {
 		return opts, errArgument
 	}
 	if opts.command == "login" {
+		if opts.feishu {
+			if opts.email != "" || opts.fromStdin {
+				return opts, errArgument
+			}
+			return opts, nil
+		}
 		opts.email = strings.TrimSpace(opts.email)
 		address, err := mail.ParseAddress(opts.email)
 		if err != nil || address.Address != opts.email {
@@ -159,6 +186,10 @@ func (a App) result(data any, err error) int {
 
 func (a App) failure(err error) int {
 	detail, exit := describeError(err)
+	return a.writeError(detail, exit)
+}
+
+func (a App) writeError(detail errorDetail, exit int) int {
 	_ = json.NewEncoder(a.Out).Encode(struct {
 		Error errorDetail `json:"error"`
 	}{Error: detail})
@@ -173,11 +204,13 @@ type errorDetail struct {
 func describeError(err error) (errorDetail, int) {
 	switch {
 	case errors.Is(err, api.ErrInvalidOrigin):
-		return errorDetail{"INVALID_ARGUMENT", "Set --api-url or SA2_API_URL to a valid HTTPS origin."}, 2
+		return errorDetail{"INVALID_ARGUMENT", "Use an HTTPS origin or a loopback HTTP origin in --api-url, SA2_API_URL, or config.json."}, 2
 	case errors.Is(err, errPasswordMode):
 		return errorDetail{"INVALID_ARGUMENT", "Use --password-stdin with non-terminal input, or enter the password in a terminal."}, 2
 	case errors.Is(err, errPassword):
 		return errorDetail{"INVALID_ARGUMENT", "Provide a nonempty password of at most 65536 bytes."}, 2
+	case errors.Is(err, errFeishuHTTPS):
+		return errorDetail{"INVALID_ARGUMENT", "Use an HTTPS API origin for Feishu login."}, 2
 	case errors.Is(err, api.ErrInvalidRequest):
 		return errorDetail{"INVALID_ARGUMENT", "SA2 rejected the supplied parameters."}, 2
 	case errors.Is(err, errArgument):
@@ -186,6 +219,12 @@ func describeError(err error) (errorDetail, int) {
 		return errorDetail{"LOGIN_REQUIRED", "Run sa2 login to start a new session."}, 3
 	case errors.Is(err, api.ErrRejected):
 		return errorDetail{"AUTH_REJECTED", "SA2 rejected authentication."}, 3
+	case errors.Is(err, api.ErrDeviceExpired), errors.Is(err, api.ErrDeviceClaimed):
+		return errorDetail{"LOGIN_REQUIRED", "Start a new Feishu authorization with sa2 login --feishu."}, 3
+	case errors.Is(err, api.ErrDeviceLimited):
+		return errorDetail{"RATE_LIMITED", "Too many Feishu login attempts. Wait before starting a new authorization."}, 1
+	case errors.Is(err, context.DeadlineExceeded):
+		return errorDetail{"AUTH_TIMEOUT", "Feishu authorization timed out. Run sa2 login --feishu to try again."}, 1
 	case errors.Is(err, session.ErrUnavailable):
 		return errorDetail{"CREDENTIAL_STORE_UNAVAILABLE", "The operating system credential store could not complete the operation."}, 1
 	case errors.Is(err, session.ErrUnsafeLock):

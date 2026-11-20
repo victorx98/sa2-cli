@@ -10,6 +10,26 @@ import (
 	"testing"
 )
 
+func TestAuthenticationReachesLoopbackHTTP(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/auth/login" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	origin, err := Origin(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := Client{HTTP: NewHTTPClient()}
+	_, err = client.Login(t.Context(), origin, "user@example.test", []byte("test password"))
+	if !errors.Is(err, ErrRejected) {
+		t.Fatalf("login error = %v; want ErrRejected from the server response", err)
+	}
+}
+
 func TestAuthenticationRejectsUntrustedTLS(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

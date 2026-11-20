@@ -1,4 +1,6 @@
 [
+  {"method": "post", "path": "/api/auth/feishu/device/start"},
+  {"method": "post", "path": "/api/auth/feishu/device/poll"},
   {"method": "post", "path": "/api/auth/login"},
   {"method": "post", "path": "/api/auth/refresh"}
 ]

@@ -65,26 +65,15 @@ func (c Client) Refresh(ctx context.Context, origin string, refreshToken []byte)
 }
 
 func (c Client) exchange(ctx context.Context, url string, input any) (Result, error) {
-	body, err := json.Marshal(input)
+	res, err := c.post(ctx, url, input)
 	if err != nil {
 		return Result{}, err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return Result{}, ErrInvalidRequest
-	}
-	req.GetBody = nil
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cache-Control", "no-store")
-	res, err := c.HTTP.Do(req)
-	if err != nil {
-		return Result{}, ErrUnavailable
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK:
+		return decodeSession(res.Body)
 	case http.StatusBadRequest:
 		return Result{}, ErrInvalidRequest
 	case http.StatusUnauthorized, http.StatusForbidden:
@@ -92,8 +81,30 @@ func (c Client) exchange(ctx context.Context, url string, input any) (Result, er
 	default:
 		return Result{}, ErrUnavailable
 	}
+}
 
-	raw, err := io.ReadAll(io.LimitReader(res.Body, maxResponseSize+1))
+func (c Client) post(ctx context.Context, url string, input any) (*http.Response, error) {
+	body, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	req.GetBody = nil
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cache-Control", "no-store")
+	res, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, ErrUnavailable
+	}
+	return res, nil
+}
+
+func decodeSession(body io.Reader) (Result, error) {
+	raw, err := io.ReadAll(io.LimitReader(body, maxResponseSize+1))
 	defer clear(raw)
 	if err != nil || len(raw) > maxResponseSize {
 		return Result{}, ErrInvalidResponse
