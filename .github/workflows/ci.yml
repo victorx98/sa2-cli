@@ -88,24 +88,26 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     steps:
-      - name: Require read access to the private API repository
-        env:
-          SA2_API_READ_TOKEN: ${{ secrets.SA2_API_READ_TOKEN }}
-        run: |
-          if [[ -z "$SA2_API_READ_TOKEN" ]]; then
-            echo '::error::Configure the sa2-cli Actions secret SA2_API_READ_TOKEN with Contents: Read access to victorx98/sa2-api.'
-            exit 1
-          fi
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - name: Read the pinned API source
+      - name: Select contract verification mode
         id: source
-        run: jq -r '"repository="+.repository, "commit="+.commit' contracts/source.json >> "$GITHUB_OUTPUT"
+        env:
+          SA2_API_READ_TOKEN: ${{ secrets.SA2_API_READ_TOKEN }}
+        run: |
+          if [[ -z "$SA2_API_READ_TOKEN" ]]; then
+            echo 'upstream=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::SA2_API_READ_TOKEN is unset. Verifying the checked-in OpenAPI snapshot only.'
+            exit 0
+          fi
+          echo 'upstream=true' >> "$GITHUB_OUTPUT"
+          jq -r '"repository="+.repository, "commit="+.commit' contracts/source.json >> "$GITHUB_OUTPUT"
       - name: Check out the pinned private API source
+        if: steps.source.outputs.upstream == 'true'
         uses: actions/checkout@v6
         with:
           repository: ${{ steps.source.outputs.repository }}
@@ -114,6 +116,10 @@ jobs:
           path: .contract-source
           persist-credentials: false
       - name: Verify the upstream blob and projection
+        if: steps.source.outputs.upstream == 'true'
         run: |
           api_document=$(jq -r .path contracts/source.json)
           go run ./tools/contract -check -source ".contract-source/$api_document"
+      - name: Verify the checked-in OpenAPI snapshot
+        if: steps.source.outputs.upstream == 'false'
+        run: go run ./tools/contract -check
