@@ -20,3 +20,5 @@ go run ./tools/contract -check -source .cache/api-openapi.json
 ```
 
 PR 检查子集形态并运行测试。主分支 CI 检出固定的 API 提交并校验 blob 和子集。手动发布前核对目标提交的 CI 结果。更新上游版本时审查生成的差异并复验请求、响应和错误映射。
+
+主分支校验需要在 `sa2-cli` 的 GitHub Actions 仓库 Secret 中配置 `SA2_API_READ_TOKEN`。凭据只需对私有 `victorx98/sa2-api` 有 `Contents: Read` 权限。GitHub Actions 为 `sa2-cli` 生成的 `GITHUB_TOKEN` 仅能访问当前仓库。配置凭据后可以重跑失败的主分支任务。
