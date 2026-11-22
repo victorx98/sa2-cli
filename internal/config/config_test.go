@@ -23,10 +23,11 @@ func TestLoadCreatesAndReloadsConfiguration(t *testing.T) {
 	t.Setenv("FEISHU_APP_ID", "")
 
 	var callers sync.WaitGroup
+	const wantOrigin = "https://sa2.mentorx.org"
 	for range 8 {
 		callers.Go(func() {
-			if cfg, err := Load(); err != nil || cfg.Origin != "https://api.mentorx.org" {
-				t.Errorf("Load() origin = %q, %v; want https://api.mentorx.org", cfg.Origin, err)
+			if cfg, err := Load(); err != nil || cfg.Origin != wantOrigin {
+				t.Errorf("Load() origin = %q, %v; want %q", cfg.Origin, err, wantOrigin)
 			}
 		})
 	}

@@ -58,6 +58,13 @@ func (c Client) Login(ctx context.Context, origin, email string, password []byte
 	}{Email: email, Password: string(password)})
 }
 
+func (c Client) FeishuLogin(ctx context.Context, origin, code, redirectURL string) (Result, error) {
+	return c.exchange(ctx, origin+"/api/auth/feishu/login", struct {
+		TempAuthCode string `json:"tempAuthCode"`
+		RedirectURL  string `json:"redirectUrl"`
+	}{TempAuthCode: code, RedirectURL: redirectURL})
+}
+
 func (c Client) Refresh(ctx context.Context, origin string, refreshToken []byte) (Result, error) {
 	return c.exchange(ctx, origin+"/api/auth/refresh", struct {
 		RefreshToken string `json:"refreshToken"`

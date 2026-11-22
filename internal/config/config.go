@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-const defaultOrigin = "https://api.mentorx.org"
+const DefaultOrigin = "https://sa2.mentorx.org"
 
 type Settings struct {
 	Origin string `json:"SA2_API_URL"`
@@ -65,7 +65,7 @@ func createDefault(path string) error {
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
-	writeErr := encoder.Encode(Settings{Origin: defaultOrigin})
+	writeErr := encoder.Encode(Settings{Origin: DefaultOrigin})
 	if err := errors.Join(writeErr, file.Close()); err != nil {
 		return err
 	}
