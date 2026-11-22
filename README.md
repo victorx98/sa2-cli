@@ -123,7 +123,7 @@ go run ./tools/contract -check
 
 Linux 原生凭据测试使用隔离的 D-Bus 和 GNOME Keyring。安装这两个测试依赖后，运行 `bash scripts/test-linux-keyring.sh`。CI 在 macOS 和 Windows 上也运行各自的原生凭据测试。
 
-主分支 CI 需能读取固定的 API 提交，私有上游可配置只读 `SA2_API_READ_TOKEN`。 [OpenAPI 契约](./contracts/README.md)
+主分支 CI 默认校验仓库内的 OpenAPI 快照。可配置 `SA2_API_READ_TOKEN` 核对私有 API 仓库的固定提交。 [OpenAPI 契约与凭据配置](./contracts/README.md)
 
 ## 手动发布
 

@@ -94,17 +94,32 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - name: Read the pinned API source
+      - name: Select contract verification mode
         id: source
-        run: jq -r '"repository="+.repository, "commit="+.commit' contracts/source.json >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v6
+        env:
+          SA2_API_READ_TOKEN: ${{ secrets.SA2_API_READ_TOKEN }}
+        run: |
+          if [[ -z "$SA2_API_READ_TOKEN" ]]; then
+            echo 'upstream=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::SA2_API_READ_TOKEN is unset. Verifying the checked-in OpenAPI snapshot only.'
+            exit 0
+          fi
+          echo 'upstream=true' >> "$GITHUB_OUTPUT"
+          jq -r '"repository="+.repository, "commit="+.commit' contracts/source.json >> "$GITHUB_OUTPUT"
+      - name: Check out the pinned private API source
+        if: steps.source.outputs.upstream == 'true'
+        uses: actions/checkout@v6
         with:
           repository: ${{ steps.source.outputs.repository }}
           ref: ${{ steps.source.outputs.commit }}
-          token: ${{ secrets.SA2_API_READ_TOKEN || github.token }}
+          token: ${{ secrets.SA2_API_READ_TOKEN }}
           path: .contract-source
           persist-credentials: false
       - name: Verify the upstream blob and projection
+        if: steps.source.outputs.upstream == 'true'
         run: |
           api_document=$(jq -r .path contracts/source.json)
           go run ./tools/contract -check -source ".contract-source/$api_document"
+      - name: Verify the checked-in OpenAPI snapshot
+        if: steps.source.outputs.upstream == 'false'
+        run: go run ./tools/contract -check
