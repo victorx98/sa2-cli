@@ -19,7 +19,7 @@ import (
 
 var (
 	errArgument    = errors.New("invalid command argument")
-	errFeishuHTTPS = errors.New("Feishu device authorization requires HTTPS")
+	errFeishuHTTPS = errors.New("Feishu web authorization requires HTTPS")
 )
 
 type App struct {
@@ -45,7 +45,7 @@ type options struct {
 const helpText = `sa2 [--api-url ORIGIN] <command>
 
   login --email EMAIL [--password-stdin]  Sign in using an email and password
-  login --feishu                         Authorize in a browser or scan with Feishu
+  login --feishu                         Scan with Feishu in a browser on this computer
   whoami                                Refresh the session and show the identity
   logout                                Clear the local session for this origin
 
@@ -54,7 +54,7 @@ const helpText = `sa2 [--api-url ORIGIN] <command>
   --version                             Show the CLI version
 
   Configuration: sa2-cli/config.json in the user configuration directory
-  Default API origin: https://api.mentorx.org
+  Default API origin: ` + config.DefaultOrigin + `
 `
 
 func (a App) Run(ctx context.Context, args []string) int {
@@ -219,10 +219,6 @@ func describeError(err error) (errorDetail, int) {
 		return errorDetail{"LOGIN_REQUIRED", "Run sa2 login to start a new session."}, 3
 	case errors.Is(err, api.ErrRejected):
 		return errorDetail{"AUTH_REJECTED", "SA2 rejected authentication."}, 3
-	case errors.Is(err, api.ErrDeviceExpired), errors.Is(err, api.ErrDeviceClaimed):
-		return errorDetail{"LOGIN_REQUIRED", "Start a new Feishu authorization with sa2 login --feishu."}, 3
-	case errors.Is(err, api.ErrDeviceLimited):
-		return errorDetail{"RATE_LIMITED", "Too many Feishu login attempts. Wait before starting a new authorization."}, 1
 	case errors.Is(err, context.DeadlineExceeded):
 		return errorDetail{"AUTH_TIMEOUT", "Feishu authorization timed out. Run sa2 login --feishu to try again."}, 1
 	case errors.Is(err, session.ErrUnavailable):
@@ -233,6 +229,8 @@ func describeError(err error) (errorDetail, int) {
 		return errorDetail{"SESSION_BUSY", "Another command is using the session. Wait for it to finish."}, 1
 	case errors.Is(err, api.ErrInvalidResponse):
 		return errorDetail{"INVALID_API_RESPONSE", "SA2 returned an invalid authentication response."}, 1
+	case errors.Is(err, auth.ErrFeishuCallbackUnavailable):
+		return errorDetail{"CALLBACK_UNAVAILABLE", "Could not start the local Feishu browser callback."}, 1
 	case errors.Is(err, api.ErrUnavailable):
 		return errorDetail{"API_UNAVAILABLE", "The SA2 API could not complete the request."}, 1
 	case errors.Is(err, context.Canceled):

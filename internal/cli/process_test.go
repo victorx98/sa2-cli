@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -275,8 +276,8 @@ func TestProcessSessionLifecycle(t *testing.T) {
 }
 
 func TestProcessFeishuSessionLifecycle(t *testing.T) {
-	var polls atomic.Int32
-	const credential = "abcdEFGHijklMNOPqrstUVWXyz0123456789_-abcdE"
+	var exchanges atomic.Int32
+	const authCode = "synthetic-feishu-code"
 	h := startHarness(t, func(w http.ResponseWriter, r *http.Request) {
 		var input map[string]string
 		if r.Method != http.MethodPost || json.NewDecoder(r.Body).Decode(&input) != nil {
@@ -285,19 +286,10 @@ func TestProcessFeishuSessionLifecycle(t *testing.T) {
 			return
 		}
 		switch r.URL.Path {
-		case "/api/auth/feishu/device/start":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"credential": credential, "verificationUri": "https://accounts.feishu.cn/device",
-				"userCode": "USER-CODE", "expiresIn": 10, "interval": 1,
-			})
-		case "/api/auth/feishu/device/poll":
-			if input["credential"] != credential {
-				t.Error("unexpected device redemption credential")
-			}
-			if polls.Add(1) == 1 {
-				w.WriteHeader(http.StatusAccepted)
-				_ = json.NewEncoder(w).Encode(map[string]int{"interval": 1})
-				return
+		case "/api/auth/feishu/login":
+			exchanges.Add(1)
+			if input["tempAuthCode"] != authCode || input["redirectUrl"] != "https://"+r.Host+"/auth" {
+				t.Error("unexpected Feishu web code or redirect URL")
 			}
 			reply(w, mockRefresh+"feishu")
 		case "/api/auth/refresh":
@@ -313,31 +305,86 @@ func TestProcessFeishuSessionLifecycle(t *testing.T) {
 	h.expect(h.command("", "", "login", "--feishu", "--api-url", "http://localhost:8094"), 2, "INVALID_ARGUMENT")
 	h.expect(h.command("", "", "login", "--feishu", "--password-stdin"), 2, "INVALID_ARGUMENT")
 	h.expect(h.command("", "", "login", "--feishu", "--email", "user@example.test"), 2, "INVALID_ARGUMENT")
-	got := observe(h.command("", "", "login", "--feishu"))
-	if got.err != nil || got.exit != 0 || !strings.Contains(got.stderr, "USER-CODE") ||
-		!strings.Contains(got.stderr, "https://accounts.feishu.cn/device") || strings.Contains(got.stderr, credential) {
-		t.Fatalf("Feishu login failed or showed the redemption credential: %+v", got)
+
+	cmd := h.command("", "", "login", "--feishu")
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if cmd.ProcessState == nil {
+			cmd.Process.Kill()
+			cmd.Wait()
+		}
+	})
+	reader := bufio.NewReader(stderr)
+	if line, err := reader.ReadString('\n'); err != nil || !strings.Contains(line, "browser on this computer") {
+		t.Fatalf("authorization prompt = %q, %v", line, err)
+	}
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+	loginURL, err := url.Parse(strings.TrimSpace(line))
+	if err != nil || loginURL.Scheme+"://"+loginURL.Host != h.origin || loginURL.Path != "/auth/cli" {
+		t.Fatalf("unexpected browser login URL: %v", err)
+	}
+	port, proof, ok := strings.Cut(strings.TrimPrefix(loginURL.Fragment, "sa2-cli="), ".")
+	if !ok || len(proof) != 43 || loginURL.RawQuery != "" {
+		t.Fatal("missing browser callback proof")
+	}
+
+	localOrigin := "http://127.0.0.1:" + port
+	client := &http.Client{Timeout: 5 * time.Second}
+	for _, attempt := range []struct {
+		origin string
+		proof  string
+		status int
+	}{
+		{h.origin, proof, http.StatusForbidden},
+		{localOrigin, "wrong-proof", http.StatusBadRequest},
+		{localOrigin, proof, http.StatusNoContent},
+	} {
+		payload, err := json.Marshal(map[string]string{"code": authCode, "proof": attempt.proof})
+		if err != nil {
+			t.Fatal(err)
+		}
+		request, err := http.NewRequestWithContext(t.Context(), http.MethodPost, localOrigin+"/feishu", bytes.NewReader(payload))
+		if err != nil {
+			t.Fatal(err)
+		}
+		request.Header.Set("Origin", attempt.origin)
+		request.Header.Set("Content-Type", "application/json")
+		response, err := client.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		if response.StatusCode != attempt.status {
+			t.Fatalf("callback status = %d; want %d", response.StatusCode, attempt.status)
+		}
+	}
+	if err := cmd.Wait(); err != nil || !strings.Contains(stdout.String(), `"id":"user-id"`) ||
+		strings.Contains(stdout.String(), "synthetic-") {
+		t.Fatalf("Feishu login result = %q, %v", stdout.String(), err)
 	}
 	h.expect(h.command("", "", "whoami"), 0, "")
 	h.expect(h.command("", "", "logout"), 0, "")
 	h.expect(h.command("", "", "whoami"), 3, "LOGIN_REQUIRED")
-	if polls.Load() != 2 {
-		t.Fatalf("Feishu polls = %d; want 2", polls.Load())
+	if exchanges.Load() != 1 {
+		t.Fatalf("Feishu exchanges = %d; want 1", exchanges.Load())
 	}
 }
 
-func TestFeishuLoginCancellationStopsPolling(t *testing.T) {
-	var polls atomic.Int32
+func TestFeishuLoginCancellationStopsCallback(t *testing.T) {
+	var exchanges atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/auth/feishu/device/start" {
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"credential":      "abcdEFGHijklMNOPqrstUVWXyz0123456789_-abcdE",
-				"verificationUri": "https://accounts.feishu.cn/device",
-				"userCode":        "USER-CODE", "expiresIn": 30, "interval": 5,
-			})
-			return
-		}
-		polls.Add(1)
+		exchanges.Add(1)
 		w.WriteHeader(http.StatusForbidden)
 	}))
 	defer server.Close()
@@ -366,12 +413,12 @@ func TestFeishuLoginCancellationStopsPolling(t *testing.T) {
 		done <- app.Run(ctx, []string{"login", "--feishu"})
 	}()
 	line, err := bufio.NewReader(read).ReadString('\n')
-	if err != nil || !strings.Contains(line, "USER-CODE") {
+	if err != nil || !strings.Contains(line, "browser on this computer") {
 		t.Fatalf("authorization prompt = %q, %v", line, err)
 	}
 	cancel()
-	if exit := <-done; exit != 130 || !strings.Contains(output.String(), `"code":"CANCELLED"`) || polls.Load() != 0 {
-		t.Fatalf("cancelled authorization exit = %d, output = %s, polls = %d", exit, &output, polls.Load())
+	if exit := <-done; exit != 130 || !strings.Contains(output.String(), `"code":"CANCELLED"`) || exchanges.Load() != 0 {
+		t.Fatalf("cancelled authorization exit = %d, output = %s, exchanges = %d", exit, &output, exchanges.Load())
 	}
 }
 

@@ -83,59 +83,22 @@
         ],
         "type": "object"
       },
-      "FeishuDevicePendingDto": {
+      "FeishuLoginDto": {
         "properties": {
-          "interval": {
-            "description": "Minimum interval before the next poll, in seconds",
-            "type": "number"
-          }
-        },
-        "required": [
-          "interval"
-        ],
-        "type": "object"
-      },
-      "FeishuDevicePollDto": {
-        "properties": {
-          "credential": {
-            "description": "Opaque SA2 device authorization credential",
+          "redirectUrl": {
+            "description": "Redirect URL used during Feishu OAuth",
+            "example": "https://admin.mentorx.com/auth",
+            "type": "string"
+          },
+          "tempAuthCode": {
+            "description": "Temporary auth code returned by Feishu OAuth",
+            "example": "temp_auth_code",
             "type": "string"
           }
         },
         "required": [
-          "credential"
-        ],
-        "type": "object"
-      },
-      "FeishuDeviceStartDto": {
-        "properties": {
-          "credential": {
-            "description": "Opaque SA2 device authorization credential",
-            "type": "string"
-          },
-          "expiresIn": {
-            "description": "Remaining authorization lifetime, in seconds",
-            "type": "number"
-          },
-          "interval": {
-            "description": "Minimum interval before the next poll, in seconds",
-            "type": "number"
-          },
-          "userCode": {
-            "description": "Code shown to the user",
-            "type": "string"
-          },
-          "verificationUri": {
-            "description": "Feishu verification URL",
-            "type": "string"
-          }
-        },
-        "required": [
-          "interval",
-          "credential",
-          "verificationUri",
-          "userCode",
-          "expiresIn"
+          "tempAuthCode",
+          "redirectUrl"
         ],
         "type": "object"
       },
@@ -202,15 +165,15 @@
   },
   "openapi": "3.0.0",
   "paths": {
-    "/api/auth/feishu/device/poll": {
+    "/api/auth/feishu/login": {
       "post": {
-        "operationId": "AuthController_pollFeishuDevice",
+        "operationId": "AuthController_feishuLogin",
         "parameters": [],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FeishuDevicePollDto"
+                "$ref": "#/components/schemas/FeishuLoginDto"
               }
             }
           },
@@ -225,63 +188,10 @@
                 }
               }
             },
-            "description": ""
-          },
-          "202": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FeishuDevicePendingDto"
-                }
-              }
-            },
-            "description": ""
-          },
-          "401": {
-            "description": "Authorization denied"
-          },
-          "403": {
-            "description": "Employee account required"
-          },
-          "409": {
-            "description": "Authorization already claimed"
-          },
-          "410": {
-            "description": "Authorization expired or invalidated"
-          },
-          "503": {
-            "description": "Device authorization unavailable"
+            "description": "Login successful"
           }
         },
-        "summary": "Poll Feishu device authorization",
-        "tags": [
-          "Authentication"
-        ]
-      }
-    },
-    "/api/auth/feishu/device/start": {
-      "post": {
-        "operationId": "AuthController_startFeishuDevice",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FeishuDeviceStartDto"
-                }
-              }
-            },
-            "description": ""
-          },
-          "429": {
-            "description": "Too many attempts"
-          },
-          "503": {
-            "description": "Device authorization unavailable"
-          }
-        },
-        "summary": "Start Feishu device authorization",
+        "summary": "Feishu QR login",
         "tags": [
           "Authentication"
         ]

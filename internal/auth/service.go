@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
-	"time"
 
 	"github.com/victorx98/sa2-cli/internal/api"
 	"github.com/victorx98/sa2-cli/internal/session"
@@ -39,38 +37,11 @@ func (s Service) Login(ctx context.Context, origin, email string, password func(
 
 func (s Service) FeishuLogin(ctx context.Context, origin string, out io.Writer) (api.Identity, error) {
 	return s.login(ctx, origin, func() (api.Result, error) {
-		started := time.Now()
-		grant, err := s.API.StartFeishuDevice(ctx, origin)
+		code, err := waitForFeishuCode(ctx, origin, out)
 		if err != nil {
 			return api.Result{}, err
 		}
-		ctx, cancel := context.WithDeadline(ctx, started.Add(time.Duration(grant.ExpiresIn)*time.Second))
-		defer cancel()
-		if _, err := fmt.Fprintf(out, "Open this Feishu URL on any device and verify code %s:\n%s\n", grant.UserCode, grant.VerificationURI); err != nil {
-			return api.Result{}, err
-		}
-
-		interval := grant.Interval
-		for {
-			timer := time.NewTimer(time.Duration(interval) * time.Second)
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				return api.Result{}, ctx.Err()
-			case <-timer.C:
-			}
-			result, next, err := s.API.PollFeishuDevice(ctx, origin, grant.Credential)
-			if err != nil {
-				if ctx.Err() != nil {
-					return api.Result{}, ctx.Err()
-				}
-				return api.Result{}, err
-			}
-			if next == 0 {
-				return result, nil
-			}
-			interval = next
-		}
+		return s.API.FeishuLogin(ctx, origin, code, origin+"/auth")
 	})
 }
 

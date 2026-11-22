@@ -17,7 +17,7 @@ Windows 源码构建使用 `go build -trimpath -o sa2.exe ./cmd/sa2`。
 
 ## API 地址配置
 
-`sa2` 首次运行时会在当前用户的配置目录下创建 `sa2-cli/config.json`，之后每次启动都会读取。可用编辑器修改并保存这个文件，已有配置会继续使用保存的值。
+缺少配置文件时，`sa2` 默认通过生产站点 `https://sa2.mentorx.org` 的反向代理访问 SA2 API，并在当前用户的配置目录下创建 `sa2-cli/config.json`。之后每次启动都会读取该文件，可用编辑器修改并保存 API 地址。
 
 | 系统 | 用户配置目录 |
 | --- | --- |
@@ -27,7 +27,7 @@ Windows 源码构建使用 `go build -trimpath -o sa2.exe ./cmd/sa2`。
 
 ```json
 {
-  "SA2_API_URL": "https://api.mentorx.org"
+  "SA2_API_URL": "https://sa2.mentorx.org"
 }
 ```
 
@@ -53,7 +53,7 @@ sa2 login --email 'you@example.com' --password-stdin < "$SA2_PASSWORD_FILE"
 sa2 login --feishu
 ```
 
-在任意电脑或手机打开终端显示的飞书验证链接，核对短码并完成授权。支持飞书 App 扫码的授权页面可以直接扫码。SA2 API 必须启用飞书设备授权。CLI 可在 SSH 或无浏览器的容器中运行，按 Ctrl+C 可取消。飞书登录沿用服务端的员工账号检查，设备会话自授权起最多续期七天。
+在桌面终端运行时，CLI 会尝试打开浏览器里的独立飞书扫码页。也可以在运行 CLI 的电脑上手动打开终端显示的链接。用飞书 App 扫码后，网页会回到本机 CLI，终端会显示结果。链接五分钟内有效，按 Ctrl+C 可取消。飞书登录沿用网页的员工账号检查。
 
 ### 查看当前身份
 
