@@ -111,6 +111,23 @@ Go 版使用独立凭据命名空间。切换前在旧版对使用过的各 orig
 
 将 [agent-cli-usage](./skills/agent-cli-usage/SKILL.md) 所在目录按 Agent 宿主支持的方式注册，再为宿主提供已安装的 `sa2` 和对应的 OS 凭据库。Skill 说明输入模式、结果解析和失败恢复。
 
+### 在本地 Codex 中使用
+
+Codex 可以通过终端直接运行 `sa2`。先在 Codex 中输入“运行 `sa2 --version` 并告诉我版本号”，确认它能从 PATH 找到已安装的 CLI。
+
+要让 Codex 根据自然语言任务自动选择这个 Skill，在 macOS 或 Linux 上从本仓库根目录执行一次：
+
+```sh
+mkdir -p "$HOME/.agents/skills"
+ln -s "$PWD/skills/agent-cli-usage" "$HOME/.agents/skills/agent-cli-usage"
+```
+
+在 Codex 中输入 `/skills` 查看列表，也可以显式调用：
+
+> $agent-cli-usage 请运行 `sa2 --help`，告诉我支持哪些登录方式。
+
+登录后，可以直接说“查看我在本地 SA2 环境 `http://localhost:8094` 的身份和角色”。对应命令为 `sa2 whoami --api-url http://localhost:8094`。登录时使用同一个 API 地址，并确保 Codex 能访问登录用户的系统凭据库。`whoami` 会轮换令牌，验证安装时使用 `--version` 或 `--help` 即可。
+
 ## 开发
 
 从本仓库执行以下检查。集成测试启动本地 HTTPS 模拟 API。
