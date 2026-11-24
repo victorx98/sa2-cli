@@ -202,6 +202,6 @@ sa2 sessions create --plan booking.plan --confirm
 sa2 sessions wait --request-id K --timeout 60s
 ```
 
-预览返回权益来源、日历及会议影响。确认前核对时区、备注可见性和权益。改期和取消同样需要生成计划。计划文件仅当前系统用户可读，绑定账号、origin、请求标识及有效期。业务提交超时后用原 requestId 执行 `sa2 sessions operation`，外部结果需要人工核对时保留原标识。
+每次预览须为 `--out` 指定新文件名。预览被阻止时命令以非零状态退出，并报告阻止原因。成功的预览返回权益来源、日历及会议影响。确认前核对时区、备注可见性和权益。改期和取消同样需要生成计划。计划文件仅当前系统用户可读，绑定账号、origin、请求标识及有效期。业务提交超时后用原 requestId 执行 `sa2 sessions operation`，外部结果需要人工核对时保留原标识。
 
 Agent 指引见 [新预约](skills/sa2-book-session/SKILL.md) 和 [查看、改期与取消](skills/sa2-manage-session/SKILL.md)。

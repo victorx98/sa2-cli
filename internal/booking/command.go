@@ -129,6 +129,7 @@ func Parse(args []string) (Command, error) {
 			if !idPattern.MatchString(v) {
 				return cmd, ErrArgument
 			}
+			cmd.Values[k] = strings.ToLower(v)
 		case k == "kind":
 			if v != "student" && v != "mentor" {
 				return cmd, ErrArgument
@@ -157,7 +158,7 @@ func Parse(args []string) (Command, error) {
 			}
 		case k == "status":
 			switch v {
-			case "pending_meeting", "scheduled", "completed", "cancelled", "deleted", "meeting_failed":
+			case "pending_meeting", "scheduled", "completed", "cancelled", "meeting_failed":
 			default:
 				return cmd, ErrArgument
 			}

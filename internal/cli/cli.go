@@ -237,6 +237,9 @@ func (a App) failure(err error) int {
 	if errors.As(err, &business) {
 		return a.writeError(errorDetail{business.Code, "SA2 rejected the request."}, 1)
 	}
+	if errors.Is(err, session.ErrPlanExists) {
+		return a.writeError(errorDetail{"PLAN_FILE_EXISTS", "Choose a new --out path for this preview."}, 2)
+	}
 	if errors.Is(err, session.ErrPlanFile) {
 		return a.writeError(errorDetail{"INVALID_PLAN_FILE", "Use a private plan for this account, origin and action."}, 2)
 	}

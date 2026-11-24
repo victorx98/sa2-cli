@@ -410,6 +410,33 @@
         ],
         "type": "object"
       },
+      "BookingMentorLookupDto": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameEn": {
+            "nullable": true,
+            "type": "string"
+          },
+          "nameZh": {
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameEn",
+          "nameZh",
+          "type"
+        ],
+        "type": "object"
+      },
       "BookingMoveInputDto": {
         "properties": {
           "bookingTimeZone": {
@@ -669,6 +696,28 @@
           "businessStatus",
           "syncStatus",
           "revision"
+        ],
+        "type": "object"
+      },
+      "BookingStudentLookupDto": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameEn": {
+            "nullable": true,
+            "type": "string"
+          },
+          "nameZh": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameEn",
+          "nameZh"
         ],
         "type": "object"
       },
@@ -2011,14 +2060,24 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/MentorSummaryResponseDto"
-                  },
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/MentorSummaryResponseDto"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/BookingMentorLookupDto"
+                      },
+                      "type": "array"
+                    }
+                  ]
                 }
               }
             },
-            "description": "Mentor results retrieved successfully"
+            "description": "Mentor name and ID for session-booking lookups, full summaries for general searches"
           }
         },
         "security": [
@@ -2607,14 +2666,24 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/StudentSummaryResponseDto"
-                  },
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/StudentSummaryResponseDto"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/BookingStudentLookupDto"
+                      },
+                      "type": "array"
+                    }
+                  ]
                 }
               }
             },
-            "description": "Student results retrieved successfully"
+            "description": "Student name and ID for session-booking lookups, full summaries for general searches"
           }
         },
         "security": [

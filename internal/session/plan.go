@@ -10,8 +10,26 @@ import (
 
 var ErrPlanFile = errors.New("invalid or inaccessible private plan file")
 
-// WritePlan creates the temporary file in the destination directory so rename cannot cross volumes.
+var ErrPlanExists = errors.New("plan output already exists")
+
+const maxPlanSize = 128 << 10
+
+func CheckNewPlanPath(path string) error {
+	_, err := os.Lstat(path)
+	if err == nil {
+		return ErrPlanExists
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return ErrPlanFile
+	}
+	return nil
+}
+
+// Publish the complete private file without replacing a plan from another preview.
 func WritePlan(path string, data []byte) error {
+	if len(data) > maxPlanSize {
+		return ErrPlanFile
+	}
 	dir := filepath.Dir(path)
 	tmp := filepath.Join(dir, ".sa2-plan-"+rand.Text())
 	f, err := privatePlanFile(tmp, true)
@@ -26,7 +44,10 @@ func WritePlan(path string, data []byte) error {
 	if err != nil || closeErr != nil {
 		return ErrPlanFile
 	}
-	if err = os.Rename(tmp, path); err != nil {
+	if err = os.Link(tmp, path); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return ErrPlanExists
+		}
 		return ErrPlanFile
 	}
 	return nil
@@ -37,9 +58,8 @@ func ReadPlan(path string) ([]byte, error) {
 		return nil, ErrPlanFile
 	}
 	defer f.Close()
-	const limit = 128 << 10
-	b, err := io.ReadAll(io.LimitReader(f, limit+1))
-	if err != nil || len(b) > limit {
+	b, err := io.ReadAll(io.LimitReader(f, maxPlanSize+1))
+	if err != nil || len(b) > maxPlanSize {
 		return nil, ErrPlanFile
 	}
 	return b, nil

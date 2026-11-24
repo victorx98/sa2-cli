@@ -23,11 +23,12 @@ type Client struct {
 	Token  []byte
 }
 type Failure struct {
-	Code       string `json:"code"`
-	Message    string `json:"message"`
-	RequestID  string `json:"requestId,omitempty"`
-	SessionID  string `json:"sessionId,omitempty"`
-	LastStatus string `json:"lastStatus,omitempty"`
+	Code       string   `json:"code"`
+	Message    string   `json:"message"`
+	RequestID  string   `json:"requestId,omitempty"`
+	SessionID  string   `json:"sessionId,omitempty"`
+	LastStatus string   `json:"lastStatus,omitempty"`
+	Blockers   []string `json:"blockers,omitempty"`
 }
 
 func (e *Failure) Error() string { return e.Code }
@@ -128,7 +129,12 @@ func summary(r map[string]any) map[string]any {
 	return project(r, "id", "sessionId", "sourceType", "readOnly", "studentUserId", "mentorUserId", "contractId", "sessionType", "sessionTypeId", "entitlementServiceType", "title", "status", "scheduledAt", "durationMins", "bookingTimeZone", "visibleToMentorOnly", "revision", "updatedAt")
 }
 func (c Client) options(ctx context.Context, v map[string]string) (any, error) {
-	var ms, cs, types, balances []map[string]any
+	var ms, cs, balances []map[string]any
+	type typeGroup struct {
+		ServiceType  string           `json:"serviceType"`
+		SessionTypes []map[string]any `json:"sessionTypes"`
+	}
+	var types []typeGroup
 	if err := c.get(ctx, "/api/mentors/find", url.Values{"mentorId": {v["mentor-id"]}, "purpose": {"session-booking"}, "status": {"active"}}, &ms); err != nil {
 		return nil, err
 	}
@@ -148,8 +154,27 @@ func (c Client) options(ctx context.Context, v map[string]string) (any, error) {
 	if err := c.get(ctx, "/api/contracts/students/"+v["student-id"], nil, &cs); err != nil {
 		return nil, err
 	}
-	if err := c.get(ctx, "/api/services/session-types", url.Values{"serviceType": {group}}, &types); err != nil {
+	if err := c.get(ctx, "/api/services/session-types", nil, &types); err != nil {
 		return nil, err
+	}
+	bookable := make([]typeGroup, 0, len(types))
+	for _, category := range types {
+		serviceType := strings.Replace(strings.ToLower(category.ServiceType), "internel", "internal", 1)
+		if !strings.Contains(serviceType, strings.ToLower(group)) {
+			continue
+		}
+		eligible := typeGroup{ServiceType: category.ServiceType}
+		for _, item := range category.SessionTypes {
+			code, _ := item["code"].(string)
+			switch code {
+			case "", "class_session", "comm_session", "mock_interview":
+				continue
+			}
+			eligible.SessionTypes = append(eligible.SessionTypes, item)
+		}
+		if len(eligible.SessionTypes) > 0 {
+			bookable = append(bookable, eligible)
+		}
 	}
 	chosen := v["contract-id"]
 	if chosen != "" {
@@ -167,9 +192,12 @@ func (c Client) options(ctx context.Context, v map[string]string) (any, error) {
 			return nil, err
 		}
 	}
-	return map[string]any{"mentor": project(ms[0], "id", "nameEn", "nameZh", "type"), "contracts": projectRows(cs, "id", "title", "status", "product"), "contractId": chosen, "sessionTypes": types, "balances": balances}, nil
+	return map[string]any{"mentor": project(ms[0], "id", "nameEn", "nameZh", "type"), "contracts": projectRows(cs, "id", "title", "status", "product"), "contractId": chosen, "sessionTypes": bookable, "balances": balances}, nil
 }
 func (c Client) preview(ctx context.Context, cmd Command) (any, error) {
+	if err := session.CheckNewPlanPath(cmd.Values["out"]); err != nil {
+		return nil, err
+	}
 	id, err := newID()
 	if err != nil {
 		return nil, err
@@ -198,22 +226,23 @@ func (c Client) preview(ctx context.Context, cmd Command) (any, error) {
 	if p.Version != 1 || !p.Capabilities.Durable || !p.Capabilities.Lookup || p.RequestID != id || p.Action != cmd.Action || p.Normalized == nil {
 		return nil, api.ErrInvalidResponse
 	}
-	if p.CanCommit {
-		if p.Token == "" || len(p.Blockers) != 0 {
-			return nil, api.ErrInvalidResponse
-		}
-		if _, err = time.Parse(time.RFC3339, p.ExpiresAt); err != nil {
-			return nil, api.ErrInvalidResponse
-		}
-		p.Actor, p.Origin = c.Actor, c.Origin
-		raw, err := json.Marshal(p)
-		if err != nil {
-			return nil, err
-		}
-		defer clear(raw)
-		if err = session.WritePlan(v["out"], raw); err != nil {
-			return nil, err
-		}
+	if !p.CanCommit {
+		return nil, &Failure{Code: "PLAN_BLOCKED", Message: "Booking preview was blocked.", RequestID: id, Blockers: p.Blockers}
+	}
+	if p.Token == "" || len(p.Blockers) != 0 {
+		return nil, api.ErrInvalidResponse
+	}
+	if _, err = time.Parse(time.RFC3339, p.ExpiresAt); err != nil {
+		return nil, api.ErrInvalidResponse
+	}
+	p.Actor, p.Origin = c.Actor, c.Origin
+	raw, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+	defer clear(raw)
+	if err = session.WritePlan(v["out"], raw); err != nil {
+		return nil, err
 	}
 	p.Actor, p.Origin, p.Token = "", "", ""
 	delete(p.Normalized, "description")
