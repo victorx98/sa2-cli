@@ -190,7 +190,9 @@ Linux 原生凭据测试使用隔离的 D-Bus 和 GNOME Keyring。安装这两�
 
 ## 一对一约课
 
-使用 `sa2 sessions --help` 查看参数。登录与业务命令使用同一 API origin。本地用 `sa2 --dev sessions` 执行预约预览和提交时，sa2-api 的 `SESSION_BOOKING_ORIGIN` 需与 `http://localhost:8094` 完全一致。以下示例中的大写 ID 为占位符。
+使用 `sa2 sessions --help` 查看参数。登录、预览和确认使用同一个 API 地址。生产环境默认访问 `https://sa2.mentorx.org`，由 nginx 将 `/api` 转发到 sa2-api。
+
+本地 API 按监听端口确定预约地址，开发环境的 `.env` 无需配置 `SESSION_BOOKING_ORIGIN`。工作区使用 8094 端口，登录和预约时都加 `--dev`。如果 API 使用其他端口，例如 8080，则两步都使用 `sa2 --api-url http://localhost:8080`。以下示例中的大写 ID 为占位符。
 
 ```sh
 sa2 sessions find --kind student --text '学生姓名'
