@@ -9,6 +9,7 @@ description: Use the SuperAcademy sa2 CLI to check the signed-in identity, sign 
 
 - 使用已安装的 `sa2`。使用源码时先按仓库 README 构建并使用生成的二进制。
 - 使用任务授权的 SA2 API origin。优先级为 `--api-url`、`SA2_API_URL` 环境变量、用户配置目录中的 `sa2-cli/config.json`。缺少配置文件时，默认地址为 `https://sa2.mentorx.org`，并在用户配置目录中创建配置文件。HTTP 仅用于环回地址，其他地址使用 HTTPS。省略认证信息、路径、查询和片段。
+- 本地开发使用 `sa2 --dev <命令>` 直连 `http://localhost:8094`，登录及后续命令都使用这个全局选项。它与 `--api-url` 互斥，本地 HTTP 使用邮箱登录。飞书扫码需要支持 `/auth/cli` 的 HTTPS 站点。
 - 使用当前 OS 账户可访问的系统凭据库。Linux 无桌面宿主需要预配持久加密、已解锁的 Secret Service。
 
 ## 执行任务

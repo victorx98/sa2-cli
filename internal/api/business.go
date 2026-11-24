@@ -21,6 +21,7 @@ func (e *BusinessError) Error() string { return e.Code }
 
 var safeCode = regexp.MustCompile("^[A-Z][A-Z0-9_]{0,79}$")
 var ErrOutcomeUnknown = errors.New("submission outcome unknown")
+var ErrBookingAPINotDeployed = errors.New("This environment does not expose the required SA2 booking API.")
 
 // Business makes exactly one authenticated call to a compiled-in route on the chosen origin.
 func (c Client) Business(ctx context.Context, origin string, access []byte, method, path string, query url.Values, input any, headers map[string]string, output any) error {
@@ -93,6 +94,10 @@ func (c Client) Business(ctx context.Context, origin string, access []byte, meth
 			Error     json.RawMessage `json:"error"`
 		}
 		_ = json.Unmarshal(raw, &detail)
+		if res.StatusCode == http.StatusNotFound && strings.HasPrefix(path, "/api/services/session-bookings/") &&
+			(detail.Message == "Cannot "+method+" "+path || detail.Message == "Cannot "+method+" "+req.URL.RequestURI()) {
+			return ErrBookingAPINotDeployed
+		}
 		code := detail.Code
 		if !safeCode.MatchString(code) {
 			code = detail.ErrorCode

@@ -189,6 +189,9 @@ func (c Client) preview(ctx context.Context, cmd Command) (any, error) {
 	}
 	var p plan
 	if err = c.API.Business(ctx, c.Origin, c.Token, "POST", prefix+"/preview", nil, map[string]any{"action": cmd.Action, "requestId": id, "input": input}, nil, &p); err != nil {
+		if errors.Is(err, api.ErrBookingAPINotDeployed) {
+			return nil, &Failure{Code: "BOOKING_API_NOT_DEPLOYED", Message: err.Error(), RequestID: id}
+		}
 		return nil, err
 	}
 	if p.Version != 1 || !p.Capabilities.Durable || !p.Capabilities.Lookup || p.RequestID != id || p.Action != cmd.Action || p.Normalized == nil {
@@ -240,6 +243,9 @@ func (c Client) commit(ctx context.Context, cmd Command) (any, error) {
 	if errors.Is(err, api.ErrOutcomeUnknown) {
 		return nil, &Failure{Code: "OUTCOME_UNKNOWN", Message: "Look up the original request ID before retrying.", RequestID: p.RequestID}
 	}
+	if errors.Is(err, api.ErrBookingAPINotDeployed) {
+		return nil, &Failure{Code: "BOOKING_API_NOT_DEPLOYED", Message: err.Error(), RequestID: p.RequestID}
+	}
 	return out, err
 }
 func (c Client) operation(ctx context.Context, cmd Command) (any, error) {
@@ -255,6 +261,9 @@ func (c Client) operation(ctx context.Context, cmd Command) (any, error) {
 	for {
 		var out map[string]any
 		err := c.get(ctx, prefix+"/operations/"+id, nil, &out)
+		if errors.Is(err, api.ErrBookingAPINotDeployed) {
+			return nil, &Failure{Code: "BOOKING_API_NOT_DEPLOYED", Message: err.Error(), RequestID: id}
+		}
 		if err == nil {
 			got, _ := out["requestId"].(string)
 			sid, _ = out["sessionId"].(string)

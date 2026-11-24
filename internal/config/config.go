@@ -8,7 +8,10 @@ import (
 	"path/filepath"
 )
 
-const DefaultOrigin = "https://sa2.mentorx.org"
+const (
+	DefaultOrigin     = "https://sa2.mentorx.org"
+	DevelopmentOrigin = "http://localhost:8094"
+)
 
 type Settings struct {
 	Origin string `json:"SA2_API_URL"`

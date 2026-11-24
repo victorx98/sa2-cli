@@ -135,6 +135,26 @@ func TestWait404ReturnsOriginalRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestWaitStopsOnMissingBookingRoute(t *testing.T) {
+	cmd, err := Parse([]string{"wait", "--request-id", fakeID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	c := Client{Origin: "https://booking.invalid", Token: []byte("fake"), API: api.Client{HTTP: &http.Client{Transport: transport(func(r *http.Request) (*http.Response, error) {
+		calls++
+		if calls > 1 {
+			t.Fatal("retried an undeployed route")
+		}
+		return reply(404, map[string]string{"message": "Cannot GET " + r.URL.Path})
+	})}}}
+	_, err = c.Run(context.Background(), cmd)
+	var failure *Failure
+	if !errors.As(err, &failure) || failure.Code != "BOOKING_API_NOT_DEPLOYED" || failure.RequestID != fakeID || calls != 1 {
+		t.Fatal(err)
+	}
+}
 func TestPrivatePlanPermissions(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX file mode test")

@@ -21,8 +21,18 @@ type operation struct {
 func main() {
 	source := flag.String("source", "", "pinned upstream OpenAPI document")
 	check := flag.Bool("check", false, "check the committed snapshot")
+	runtime := flag.String("runtime", "", "compare the deployed API at this origin to the CLI snapshot (read only)")
 	flag.Parse()
-	if err := run(*source, *check); err != nil {
+	var err error
+	switch {
+	case *runtime != "" && *source != "":
+		err = errors.New("choose -runtime or -source")
+	case *runtime != "":
+		err = checkRuntime(*runtime)
+	default:
+		err = run(*source, *check)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
