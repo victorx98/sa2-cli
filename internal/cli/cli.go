@@ -70,17 +70,6 @@ func (a App) Run(ctx context.Context, args []string) int {
 	if opts.dev && opts.apiURL != nil {
 		return a.writeError(errorDetail{"INVALID_ARGUMENT", "Choose either --dev or --api-url."}, 2)
 	}
-	target := config.DevelopmentOrigin
-	if !opts.dev {
-		settings, err := a.LoadConfig()
-		if err != nil {
-			return a.writeError(errorDetail{"CONFIG_ERROR", err.Error()}, 1)
-		}
-		target = settings.Origin
-		if opts.apiURL != nil {
-			target = *opts.apiURL
-		}
-	}
 	if opts.help && opts.command == "sessions" {
 		fmt.Fprint(a.Out, booking.Help)
 		return 0
@@ -94,6 +83,16 @@ func (a App) Run(ctx context.Context, args []string) int {
 		return 0
 	}
 
+	target := config.DevelopmentOrigin
+	if opts.apiURL != nil {
+		target = *opts.apiURL
+	} else if !opts.dev {
+		settings, err := a.LoadConfig()
+		if err != nil {
+			return a.writeError(errorDetail{"CONFIG_ERROR", err.Error()}, 1)
+		}
+		target = settings.Origin
+	}
 	origin, err := api.Origin(target)
 	if err != nil {
 		return a.failure(err)

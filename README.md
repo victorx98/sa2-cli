@@ -31,7 +31,7 @@ Windows 源码构建使用 `go build -trimpath -o sa2.exe ./cmd/sa2`。
 }
 ```
 
-优先级从高到低为 `--api-url`、`SA2_API_URL` 环境变量、配置文件。HTTP 只允许 `localhost` 或环回 IP，其他地址使用 HTTPS。地址可含端口，省略账号凭据、路径、查询和片段。
+优先级从高到低为 `--api-url`、`SA2_API_URL` 环境变量、配置文件。指定 `--api-url` 时跳过配置文件。查看帮助或版本也无需读取配置。HTTP 只允许 `localhost` 或环回 IP，其他地址使用 HTTPS。地址可含端口，省略账号凭据、路径、查询和片段。
 
 本地开发时将全局选项 `--dev` 放在子命令前，例如 `sa2 --dev whoami`。它直连 `http://localhost:8094` 的 sa2-api，跳过 `SA2_API_URL` 和用户配置文件。`--dev` 与 `--api-url` 互斥。登录和后续命令使用相同的地址，凭据按地址隔离。
 
