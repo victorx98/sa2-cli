@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/victorx98/sa2-cli/internal/booking"
 	"io"
 	"net/mail"
 	"os"
@@ -33,6 +34,7 @@ type App struct {
 }
 
 type options struct {
+	sessions  booking.Command
 	command   string
 	origin    string
 	email     string
@@ -48,6 +50,7 @@ const helpText = `sa2 [--api-url ORIGIN] <command>
   login --feishu                         Scan with Feishu in a browser on this computer
   whoami                                Refresh the session and show the identity
   logout                                Clear the local session for this origin
+  sessions                              Find, preview, commit and track session bookings
 
   --api-url ORIGIN                       Overrides SA2_API_URL and config.json
   --help                                Show help
@@ -65,6 +68,10 @@ func (a App) Run(ctx context.Context, args []string) int {
 	opts, err := parse(args, settings.Origin)
 	if err != nil {
 		return a.failure(err)
+	}
+	if opts.help && opts.command == "sessions" {
+		fmt.Fprint(a.Out, booking.Help)
+		return 0
 	}
 	if opts.help {
 		fmt.Fprint(a.Out, helpText)
@@ -90,6 +97,15 @@ func (a App) Run(ctx context.Context, args []string) int {
 	service := auth.Service{API: a.API, Vault: vault, Locks: locks}
 
 	switch opts.command {
+	case "sessions":
+		result, err := service.Renew(ctx, origin)
+		if err != nil {
+			return a.failure(err)
+		}
+		defer clear(result.AccessToken)
+		client := booking.Client{API: a.API, Origin: origin, Actor: result.Identity.ID, Token: result.AccessToken}
+		data, err := client.Run(ctx, opts.sessions)
+		return a.result(data, err)
 	case "login":
 		if opts.feishu {
 			identity, err := service.FeishuLogin(ctx, origin, a.Err)
@@ -133,6 +149,17 @@ func parse(args []string, defaultOrigin string) (options, error) {
 	}
 	opts.command = root.Arg(0)
 	switch opts.command {
+	case "sessions":
+		cmd, err := booking.Parse(root.Args()[1:])
+		if errors.Is(err, booking.ErrHelp) {
+			opts.help = true
+			return opts, nil
+		}
+		if err != nil {
+			return opts, errArgument
+		}
+		opts.sessions = cmd
+		return opts, nil
 	case "login", "whoami", "logout":
 	default:
 		return opts, errArgument
@@ -185,6 +212,19 @@ func (a App) result(data any, err error) int {
 }
 
 func (a App) failure(err error) int {
+	var problem *booking.Failure
+	if errors.As(err, &problem) {
+		_ = json.NewEncoder(a.Out).Encode(map[string]any{"error": problem})
+		return 1
+	}
+	var business *api.BusinessError
+	if errors.As(err, &business) {
+		return a.writeError(errorDetail{business.Code, "SA2 rejected the request."}, 1)
+	}
+	if errors.Is(err, session.ErrPlanFile) {
+		return a.writeError(errorDetail{"INVALID_PLAN_FILE", "Use a private plan for this account, origin and action."}, 2)
+	}
+
 	detail, exit := describeError(err)
 	return a.writeError(detail, exit)
 }

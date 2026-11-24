@@ -83,6 +83,653 @@
         ],
         "type": "object"
       },
+      "BookingAvailabilityDto": {
+        "properties": {
+          "asOf": {
+            "type": "string"
+          },
+          "intervals": {
+            "items": {
+              "$ref": "#/components/schemas/BookingIntervalDto"
+            },
+            "type": "array"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "asOf",
+          "timezone",
+          "truncated",
+          "intervals"
+        ],
+        "type": "object"
+      },
+      "BookingCancelInputDto": {
+        "properties": {
+          "reason": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "sessionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sessionId",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "BookingCapabilitiesDto": {
+        "properties": {
+          "durableReplay": {
+            "type": "boolean"
+          },
+          "operationLookup": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "durableReplay",
+          "operationLookup"
+        ],
+        "type": "object"
+      },
+      "BookingCommitRequestDto": {
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "reschedule",
+              "cancel"
+            ],
+            "type": "string"
+          },
+          "normalized": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BookingCreateInputDto"
+              },
+              {
+                "$ref": "#/components/schemas/BookingMoveInputDto"
+              },
+              {
+                "$ref": "#/components/schemas/BookingCancelInputDto"
+              }
+            ]
+          },
+          "planToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "normalized",
+          "planToken"
+        ],
+        "type": "object"
+      },
+      "BookingCreateInputDto": {
+        "properties": {
+          "bookingTimeZone": {
+            "enum": [
+              "America/Los_Angeles",
+              "America/Denver",
+              "America/Chicago",
+              "America/New_York",
+              "Europe/London",
+              "Asia/Shanghai",
+              "Australia/Sydney"
+            ],
+            "type": "string"
+          },
+          "contractId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "durationMins": {
+            "maximum": 2147483647,
+            "minimum": 15,
+            "type": "number"
+          },
+          "entitlementServiceType": {
+            "enum": [
+              "Internal",
+              "External"
+            ],
+            "type": "string"
+          },
+          "meetingProvider": {
+            "default": "feishu",
+            "enum": [
+              "feishu"
+            ],
+            "type": "string"
+          },
+          "mentorId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sessionTypeId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "visibleToMentorOnly": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "scheduledAt",
+          "bookingTimeZone",
+          "durationMins",
+          "studentId",
+          "mentorId",
+          "contractId",
+          "sessionTypeId",
+          "entitlementServiceType",
+          "title"
+        ],
+        "type": "object"
+      },
+      "BookingEffectsDto": {
+        "properties": {
+          "beijingEnd": {
+            "nullable": true,
+            "type": "string"
+          },
+          "beijingStart": {
+            "nullable": true,
+            "type": "string"
+          },
+          "bookingTimeZone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "calendar": {
+            "type": "string"
+          },
+          "contractId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "end": {
+            "nullable": true,
+            "type": "string"
+          },
+          "holds": {
+            "items": {
+              "$ref": "#/components/schemas/BookingHoldEffectDto"
+            },
+            "type": "array"
+          },
+          "initializesGapRecord": {
+            "type": "boolean"
+          },
+          "isBilling": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "localEnd": {
+            "nullable": true,
+            "type": "string"
+          },
+          "localStart": {
+            "nullable": true,
+            "type": "string"
+          },
+          "meeting": {
+            "type": "string"
+          },
+          "mentorId": {
+            "type": "string"
+          },
+          "notesVisibility": {
+            "type": "string"
+          },
+          "notificationRoles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "sessionType": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sessionTypeId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "studentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "localStart",
+          "localEnd",
+          "beijingStart",
+          "beijingEnd",
+          "initializesGapRecord",
+          "studentId",
+          "mentorId",
+          "contractId",
+          "sessionTypeId",
+          "sessionType",
+          "isBilling",
+          "start",
+          "end",
+          "bookingTimeZone",
+          "holds",
+          "calendar",
+          "meeting",
+          "notificationRoles",
+          "notesVisibility"
+        ],
+        "type": "object"
+      },
+      "BookingHoldEffectDto": {
+        "properties": {
+          "businessContractId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "primary",
+              "additional"
+            ],
+            "type": "string"
+          },
+          "matchedBy": {
+            "type": "string"
+          },
+          "previousQuantity": {
+            "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "serviceType": {
+            "type": "string"
+          },
+          "usedContractId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "serviceType",
+          "quantity",
+          "previousQuantity",
+          "businessContractId",
+          "usedContractId",
+          "matchedBy"
+        ],
+        "type": "object"
+      },
+      "BookingIntervalDto": {
+        "properties": {
+          "end": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "type": "object"
+      },
+      "BookingMoveInputDto": {
+        "properties": {
+          "bookingTimeZone": {
+            "enum": [
+              "America/Los_Angeles",
+              "America/Denver",
+              "America/Chicago",
+              "America/New_York",
+              "Europe/London",
+              "Asia/Shanghai",
+              "Australia/Sydney"
+            ],
+            "type": "string"
+          },
+          "durationMins": {
+            "maximum": 2147483647,
+            "minimum": 15,
+            "type": "number"
+          },
+          "scheduledAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sessionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheduledAt",
+          "bookingTimeZone",
+          "durationMins",
+          "sessionId"
+        ],
+        "type": "object"
+      },
+      "BookingOperationDto": {
+        "properties": {
+          "acceptedBusinessStatus": {
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "create",
+              "reschedule",
+              "cancel"
+            ],
+            "type": "string"
+          },
+          "businessStatus": {
+            "type": "string"
+          },
+          "errorCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "notificationStatus": {
+            "description": "Mira group card delivery",
+            "enum": [
+              "pending",
+              "sending",
+              "sent",
+              "not_required",
+              "needs_review"
+            ],
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "scheduledAt": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "syncStatus": {
+            "enum": [
+              "pending",
+              "succeeded",
+              "failed",
+              "needs_review",
+              "not_required"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "sessionId",
+          "action",
+          "businessStatus",
+          "syncStatus",
+          "revision",
+          "notificationStatus",
+          "acceptedBusinessStatus",
+          "errorCode",
+          "scheduledAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "BookingPreviewDto": {
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "reschedule",
+              "cancel"
+            ],
+            "type": "string"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "canCommit": {
+            "type": "boolean"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/BookingCapabilitiesDto"
+          },
+          "effects": {
+            "$ref": "#/components/schemas/BookingEffectsDto"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "normalized": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BookingCreateInputDto"
+              },
+              {
+                "$ref": "#/components/schemas/BookingMoveInputDto"
+              },
+              {
+                "$ref": "#/components/schemas/BookingCancelInputDto"
+              }
+            ]
+          },
+          "planToken": {
+            "type": "string"
+          },
+          "protocolVersion": {
+            "type": "number"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "revision": {
+            "nullable": true,
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "protocolVersion",
+          "capabilities",
+          "requestId",
+          "action",
+          "canCommit",
+          "normalized",
+          "effects",
+          "warnings",
+          "blockers",
+          "expiresAt",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "BookingPreviewRequestDto": {
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "reschedule",
+              "cancel"
+            ],
+            "type": "string"
+          },
+          "input": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BookingCreateInputDto"
+              },
+              {
+                "$ref": "#/components/schemas/BookingMoveInputDto"
+              },
+              {
+                "$ref": "#/components/schemas/BookingCancelInputDto"
+              }
+            ]
+          },
+          "requestId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "requestId",
+          "input"
+        ],
+        "type": "object"
+      },
+      "BookingReceiptDto": {
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "reschedule",
+              "cancel"
+            ],
+            "type": "string"
+          },
+          "businessStatus": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "syncStatus": {
+            "enum": [
+              "pending",
+              "succeeded",
+              "failed",
+              "needs_review",
+              "not_required"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "sessionId",
+          "action",
+          "businessStatus",
+          "syncStatus",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "CounselorNoteCommentDto": {
+        "properties": {
+          "author": {
+            "description": "Note author. [备注人]",
+            "example": "Emma",
+            "type": "string"
+          },
+          "authorId": {
+            "description": "Author user ID. [备注人 ID]",
+            "example": "3f6e2f5a-3a3f-4f43-9c45-4d6df3c40f1f",
+            "type": "string"
+          },
+          "content": {
+            "description": "Note content. [备注内容]",
+            "example": "沟通顺畅，适合辅导后端岗位。",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable comment ID. [备注 ID]",
+            "example": "3f6e2f5a-3a3f-4f43-9c45-4d6df3c40f1f",
+            "type": "string"
+          },
+          "status": {
+            "description": "Note status: good or bad. [备注状态]",
+            "enum": [
+              "good",
+              "bad"
+            ],
+            "example": "good",
+            "type": "string"
+          },
+          "time": {
+            "description": "Note time. [备注时间]",
+            "example": "2026.07.03 14:30:05",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "status"
+        ],
+        "type": "object"
+      },
+      "CounselorNoteDataDto": {
+        "properties": {
+          "comments": {
+            "description": "Counselor note comments. [导师备注列表]",
+            "items": {
+              "$ref": "#/components/schemas/CounselorNoteCommentDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "comments"
+        ],
+        "type": "object"
+      },
       "FeishuLoginDto": {
         "properties": {
           "redirectUrl": {
@@ -121,6 +768,372 @@
         ],
         "type": "object"
       },
+      "MeetingDto": {
+        "properties": {
+          "actualDurationMins": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lastMeetingEndedTimestamp": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "meetingId": {
+            "type": "string"
+          },
+          "meetingNo": {
+            "type": "string"
+          },
+          "meetingProvider": {
+            "type": "string"
+          },
+          "meetingTimeList": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meetingUrl": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "pendingTaskId": {
+            "type": "string"
+          },
+          "recordingUrl": {
+            "type": "string"
+          },
+          "scheduleDurationMins": {
+            "type": "number"
+          },
+          "scheduleStartTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "meetingNo",
+          "meetingProvider",
+          "meetingId",
+          "topic",
+          "meetingUrl",
+          "ownerId",
+          "scheduleStartTime",
+          "scheduleDurationMins",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "MentorJobTitleResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Record created time",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Mentor job title ID",
+            "type": "string"
+          },
+          "jobCategoryId": {
+            "description": "Job category ID",
+            "nullable": true,
+            "type": "string"
+          },
+          "jobTitleId": {
+            "description": "Job title ID",
+            "type": "string"
+          },
+          "jobTitleNameEn": {
+            "description": "Job title name in English",
+            "nullable": true,
+            "type": "string"
+          },
+          "jobTitleNameZh": {
+            "description": "Job title name in Chinese",
+            "nullable": true,
+            "type": "string"
+          },
+          "jobTitleStatus": {
+            "description": "Job title status",
+            "nullable": true,
+            "type": "string"
+          },
+          "mentorId": {
+            "description": "Mentor ID",
+            "type": "string"
+          },
+          "normalJobTitle": {
+            "description": "Normalized job title",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Record last modified time",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mentorId",
+          "jobTitleId",
+          "createdAt",
+          "updatedAt",
+          "jobTitleNameEn",
+          "jobTitleNameZh",
+          "normalJobTitle",
+          "jobTitleStatus",
+          "jobCategoryId"
+        ],
+        "type": "object"
+      },
+      "MentorSummaryResponseDto": {
+        "properties": {
+          "briefIntro": {
+            "description": "Brief introduction",
+            "type": "string"
+          },
+          "company": {
+            "description": "Company info",
+            "example": {
+              "id": "3f6e2f5a-3a3f-4f43-9c45-4d6df3c40f1f",
+              "name_en": "Acme Inc.",
+              "name_zh": "艾克米"
+            },
+            "type": "object"
+          },
+          "counselorNote": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CounselorNoteDataDto"
+              }
+            ],
+            "description": "Counselor-only internal notes about the mentor. [仅顾问可见的导师备注]",
+            "nullable": true,
+            "type": "object"
+          },
+          "country": {
+            "description": "ISO 3166-1 alpha-2 country code",
+            "enum": [
+              "US",
+              "CN",
+              "GB",
+              "UK",
+              "CA",
+              "AU",
+              "HK",
+              "SG"
+            ],
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Record created time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "domain": {
+            "description": "Professional coaching domains",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address",
+            "type": "string"
+          },
+          "familarSkills": {
+            "description": "Familiar skills",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "gender": {
+            "description": "Gender",
+            "enum": [
+              "male",
+              "female"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "description": "Mentor ID",
+            "type": "string"
+          },
+          "level": {
+            "description": "Mentor level",
+            "type": "string"
+          },
+          "location": {
+            "description": "Location",
+            "type": "string"
+          },
+          "mentorJobTitles": {
+            "description": "Mentor job titles",
+            "items": {
+              "$ref": "#/components/schemas/MentorJobTitleResponseDto"
+            },
+            "type": "array"
+          },
+          "modifiedAt": {
+            "description": "Record last modified time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "type": "string"
+          },
+          "nameZh": {
+            "description": "Chinese name",
+            "type": "string"
+          },
+          "onboardingResume": {
+            "description": "Active resume uploaded during mentor onboarding, if any. [导师入驻时上传的有效简历，如有]",
+            "example": {
+              "fileId": "7a1b2c3d-4e5f-6789-abcd-ef0123456789",
+              "fileSize": 102400,
+              "inviteId": "3f6e2f5a-3a3f-4f43-9c45-4d6df3c40f1f",
+              "name": "resume.pdf"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "previousCompanies": {
+            "description": "Previous companies from work experience records",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "providedServices": {
+            "description": "Provided services",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "rating": {
+            "description": "Mentor rating",
+            "nullable": true,
+            "type": "number"
+          },
+          "referral": {
+            "description": "Referral source or capability flag",
+            "nullable": true,
+            "type": "string"
+          },
+          "school": {
+            "description": "School",
+            "type": "string"
+          },
+          "serviceRatings": {
+            "description": "Service grades keyed by service code. Values: unsatisfactory, satisfactory, excellent. Visible to admin and counselor only.",
+            "example": {
+              "gap_analysis": "excellent",
+              "resume_revision": "satisfactory"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "serviceTags": {
+            "description": "Mentor service tags, includes referral capability when applicable",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "description": "Mentor status",
+            "type": "string"
+          },
+          "title": {
+            "description": "Mentor job title",
+            "type": "string"
+          },
+          "totalWorkYears": {
+            "description": "Total work years",
+            "nullable": true,
+            "type": "number"
+          },
+          "type": {
+            "description": "Mentor type",
+            "type": "string"
+          },
+          "userEducations": {
+            "description": "User education records",
+            "items": {
+              "$ref": "#/components/schemas/UserEducationResponseDto"
+            },
+            "type": "array"
+          },
+          "userId": {
+            "description": "Associated user ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "createdAt",
+          "modifiedAt",
+          "email"
+        ],
+        "type": "object"
+      },
+      "PaginatedSessionResponseDto": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SessionResponseDto"
+            },
+            "type": "array"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "data",
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ],
+        "type": "object"
+      },
       "RefreshSessionDto": {
         "properties": {
           "refreshToken": {
@@ -130,6 +1143,594 @@
         },
         "required": [
           "refreshToken"
+        ],
+        "type": "object"
+      },
+      "ServiceBalanceResponseDto": {
+        "properties": {
+          "availableQuantity": {
+            "description": "Available quantity",
+            "type": "number"
+          },
+          "consumedQuantity": {
+            "description": "Consumed quantity",
+            "type": "number"
+          },
+          "heldQuantity": {
+            "description": "Held quantity",
+            "type": "number"
+          },
+          "serviceType": {
+            "description": "Service type",
+            "type": "string"
+          },
+          "studentId": {
+            "description": "Student ID",
+            "type": "string"
+          },
+          "totalQuantity": {
+            "description": "Total quantity",
+            "type": "number"
+          }
+        },
+        "required": [
+          "studentId",
+          "serviceType",
+          "totalQuantity",
+          "consumedQuantity",
+          "heldQuantity",
+          "availableQuantity"
+        ],
+        "type": "object"
+      },
+      "SessionEvaluationReportDto": {
+        "properties": {
+          "evaluationId": {
+            "type": "string"
+          },
+          "evaluationType": {
+            "type": "string"
+          },
+          "reportUrl": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluationId",
+          "evaluationType",
+          "status",
+          "reportUrl"
+        ],
+        "type": "object"
+      },
+      "SessionLocalizedNameDto": {
+        "properties": {
+          "en": {
+            "type": "string"
+          },
+          "zh": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "en",
+          "zh"
+        ],
+        "type": "object"
+      },
+      "SessionResponseDto": {
+        "properties": {
+          "bookingTimeZone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "cancellationType": {
+            "enum": [
+              "standard",
+              "post_completion"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelledAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelledBy": {
+            "nullable": true,
+            "type": "string"
+          },
+          "cancelledByName": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionLocalizedNameDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "cancelledReason": {
+            "nullable": true,
+            "type": "string"
+          },
+          "classId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "className": {
+            "nullable": true,
+            "type": "string"
+          },
+          "completedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "contractId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdByCounselorId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "durationMins": {
+            "nullable": true,
+            "type": "number"
+          },
+          "entitlementServiceType": {
+            "enum": [
+              "Internal",
+              "External"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "evaluationReport": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionEvaluationReportDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "meeting": {
+            "$ref": "#/components/schemas/MeetingDto"
+          },
+          "meetingId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "mentorType": {
+            "nullable": true,
+            "type": "string"
+          },
+          "mentorUserId": {
+            "type": "string"
+          },
+          "readOnly": {
+            "type": "boolean"
+          },
+          "revision": {
+            "description": "Opaque booking revision for a sessions row",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "sessionType": {
+            "type": "string"
+          },
+          "sessionTypeId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sourceType": {
+            "enum": [
+              "session",
+              "class_session"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "studentUserId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "visibleToMentorOnly": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "meetingId",
+          "sessionType",
+          "sessionTypeId",
+          "entitlementServiceType",
+          "studentUserId",
+          "mentorUserId",
+          "createdByCounselorId",
+          "title",
+          "visibleToMentorOnly",
+          "status",
+          "scheduledAt",
+          "cancelledBy",
+          "cancelledByName",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "SessionTypeItemResponseDto": {
+        "properties": {
+          "code": {
+            "description": "Session type code",
+            "type": "string"
+          },
+          "id": {
+            "description": "Session type ID",
+            "type": "string"
+          },
+          "isBilling": {
+            "description": "Is billing enabled",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Session type name (i18n)",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "isBilling"
+        ],
+        "type": "object"
+      },
+      "SessionTypeResponseDto": {
+        "properties": {
+          "serviceType": {
+            "description": "Service type (e.g., External, Internal)",
+            "type": "string"
+          },
+          "sessionTypes": {
+            "description": "Session types under this service type",
+            "items": {
+              "$ref": "#/components/schemas/SessionTypeItemResponseDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "serviceType",
+          "sessionTypes"
+        ],
+        "type": "object"
+      },
+      "StudentContractProductSummaryResponseDto": {
+        "properties": {
+          "id": {
+            "description": "Product ID (UUID). [产品ID(UUID)]",
+            "type": "string"
+          },
+          "name": {
+            "description": "Product name. [产品名称]",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "StudentContractResponseDto": {
+        "properties": {
+          "contract_number": {
+            "description": "Contract number. [合同编号]",
+            "example": "CONTRACT-2025-01-00001",
+            "type": "string"
+          },
+          "id": {
+            "description": "Contract ID (UUID). [合同ID(UUID)]",
+            "type": "string"
+          },
+          "product": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudentContractProductSummaryResponseDto"
+              }
+            ],
+            "description": "Product summary in contract snapshot. [合同快照中的产品摘要]"
+          },
+          "status": {
+            "description": "New Student Status of the contract; null for viewers outside internal staff. [合同状态，仅内部员工可见]",
+            "enum": [
+              "Active",
+              "At risk",
+              "Completed - ended",
+              "Completed - placed",
+              "Completed - refunded",
+              "In progress",
+              "On hold",
+              "Switch-to-China",
+              "Urgent"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "description": "Contract title. Preferred display label; fall back to product.name when absent. [合同标题，前端选择合同时优先展示]",
+            "example": "Premium Mentoring Contract",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contract_number",
+          "product",
+          "status"
+        ],
+        "type": "object"
+      },
+      "StudentSummaryResponseDto": {
+        "properties": {
+          "aiResumeSummary": {
+            "description": "AI resume summary",
+            "type": "string"
+          },
+          "backgroundInfo": {
+            "description": "Background info",
+            "type": "string"
+          },
+          "country": {
+            "description": "ISO 3166-1 alpha-2 country code",
+            "enum": [
+              "US",
+              "CN",
+              "GB",
+              "UK",
+              "CA",
+              "AU",
+              "HK",
+              "SG"
+            ],
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Record created time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "customerImportance": {
+            "description": "Customer importance",
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address",
+            "type": "string"
+          },
+          "gender": {
+            "description": "Gender",
+            "enum": [
+              "male",
+              "female"
+            ],
+            "type": "string"
+          },
+          "grades": {
+            "description": "Grades",
+            "type": "string"
+          },
+          "graduateCollege": {
+            "description": "Graduate college ID",
+            "type": "string"
+          },
+          "graduateGraduationDate": {
+            "description": "Graduate graduation date",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "graduateMajor": {
+            "description": "Graduate major ID",
+            "type": "string"
+          },
+          "id": {
+            "description": "Student ID",
+            "type": "string"
+          },
+          "modifiedAt": {
+            "description": "Record last modified time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "type": "string"
+          },
+          "nameZh": {
+            "description": "Chinese name",
+            "type": "string"
+          },
+          "productNames": {
+            "description": "Current contract product names",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "description": "Student status",
+            "type": "string"
+          },
+          "underCollege": {
+            "description": "Undergraduate college ID",
+            "type": "string"
+          },
+          "underGraduationDate": {
+            "description": "Undergraduate graduation date",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "underMajor": {
+            "description": "Undergraduate major ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "underMajor",
+          "underCollege",
+          "graduateMajor",
+          "graduateCollege",
+          "aiResumeSummary",
+          "customerImportance",
+          "underGraduationDate",
+          "graduateGraduationDate",
+          "backgroundInfo",
+          "grades",
+          "createdAt",
+          "modifiedAt",
+          "email",
+          "nameEn",
+          "nameZh",
+          "productNames"
+        ],
+        "type": "object"
+      },
+      "UserEducationResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Record created time",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "degreeLevel": {
+            "description": "Degree level",
+            "nullable": true,
+            "type": "string"
+          },
+          "endDate": {
+            "description": "End date",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "gpa": {
+            "description": "GPA",
+            "nullable": true,
+            "type": "number"
+          },
+          "id": {
+            "description": "Education record ID",
+            "type": "string"
+          },
+          "isCurrent": {
+            "description": "Currently enrolled",
+            "nullable": true,
+            "type": "boolean"
+          },
+          "majorId": {
+            "description": "Major ID",
+            "nullable": true,
+            "type": "string"
+          },
+          "majorNameEn": {
+            "description": "Major name in English",
+            "nullable": true,
+            "type": "string"
+          },
+          "majorNameZh": {
+            "description": "Major name in Chinese",
+            "nullable": true,
+            "type": "string"
+          },
+          "schoolId": {
+            "description": "School ID",
+            "nullable": true,
+            "type": "string"
+          },
+          "schoolNameEn": {
+            "description": "School name in English",
+            "nullable": true,
+            "type": "string"
+          },
+          "schoolNameZh": {
+            "description": "School name in Chinese",
+            "nullable": true,
+            "type": "string"
+          },
+          "startDate": {
+            "description": "Start date",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Record last modified time",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "userId": {
+            "description": "Associated user ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "schoolId",
+          "majorId",
+          "degreeLevel",
+          "startDate",
+          "endDate",
+          "isCurrent",
+          "gpa",
+          "createdAt",
+          "updatedAt",
+          "schoolNameZh",
+          "schoolNameEn",
+          "majorNameZh",
+          "majorNameEn"
         ],
         "type": "object"
       },
@@ -154,6 +1755,13 @@
           "cnName"
         ],
         "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
       }
     }
   },
@@ -264,6 +1872,837 @@
         "summary": "Refresh authentication session",
         "tags": [
           "Authentication"
+        ]
+      }
+    },
+    "/api/contracts/students/{studentId}": {
+      "get": {
+        "description": "Retrieve all contracts purchased by a student with product information and contract status. [查询学生购买的合同列表，包含产品摘要与合同状态]",
+        "operationId": "ContractsController_getStudentContracts",
+        "parameters": [
+          {
+            "description": "Student ID (UUID). [学生ID(UUID)]",
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StudentContractResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Student contracts retrieved successfully"
+          },
+          "400": {
+            "description": "Invalid student ID format"
+          },
+          "403": {
+            "description": "Not allowed to view this student's contracts"
+          },
+          "404": {
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get contracts purchased by a specific student",
+        "tags": [
+          "Contracts"
+        ]
+      }
+    },
+    "/api/mentors/find": {
+      "get": {
+        "operationId": "MentorsController_findMentors",
+        "parameters": [
+          {
+            "description": "Search keyword to filter mentors",
+            "in": "query",
+            "name": "text",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter mentors by student ID",
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of items to return (page size)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Filter mentors by active pricing type",
+            "in": "query",
+            "name": "pricingType",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter mentors by active recommendation-letter package type",
+            "in": "query",
+            "name": "packageType",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter mentors by mentor status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "example": "active",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "purpose",
+            "required": false,
+            "schema": {
+              "enum": [
+                "session-booking"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exact active mentor for booking options",
+            "in": "query",
+            "name": "mentorId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MentorSummaryResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Mentor results retrieved successfully"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "find mentor",
+        "tags": [
+          "Mentors"
+        ]
+      }
+    },
+    "/api/services/session-bookings/availability": {
+      "get": {
+        "operationId": "SessionBookingController_availability",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "durationMins",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timezone",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclusive local date",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Inclusive local date",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mentorId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingAvailabilityDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Find common free intervals for a student and mentor",
+        "tags": [
+          "Session bookings"
+        ]
+      }
+    },
+    "/api/services/session-bookings/commit": {
+      "post": {
+        "operationId": "SessionBookingController_commit",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-sa2-origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-idempotency-key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required for reschedule and cancel",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SA2-Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingCommitRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingReceiptDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingReceiptDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "description": "Business or idempotency conflict"
+          },
+          "410": {
+            "description": "Plan expired"
+          },
+          "412": {
+            "description": "Stale session revision"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Commit one signed plan or replay its original receipt",
+        "tags": [
+          "Session bookings"
+        ]
+      }
+    },
+    "/api/services/session-bookings/operations/{requestId}": {
+      "get": {
+        "operationId": "SessionBookingController_operation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-sa2-origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SA2-Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingOperationDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the authenticated actor's booking receipt and synchronization state",
+        "tags": [
+          "Session bookings"
+        ]
+      }
+    },
+    "/api/services/session-bookings/preview": {
+      "post": {
+        "operationId": "SessionBookingController_preview",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-sa2-origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-SA2-Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingPreviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingPreviewDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview a booking and its calendar, entitlement and meeting effects",
+        "tags": [
+          "Session bookings"
+        ]
+      }
+    },
+    "/api/services/session-types": {
+      "get": {
+        "description": "Retrieve session types, optionally filtered by service type (e.g., External, Internal)",
+        "operationId": "SessionTypesController_getSessionTypes",
+        "parameters": [
+          {
+            "description": "Filter by service type (e.g., External, Internal)",
+            "in": "query",
+            "name": "serviceType",
+            "required": false,
+            "schema": {
+              "example": "External",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionTypeResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Session types retrieved successfully"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get session types list",
+        "tags": [
+          "Session Types"
+        ]
+      }
+    },
+    "/api/services/sessions": {
+      "get": {
+        "description": "\n      Retrieve sessions with support for multiple query combinations:\n\n      Query Parameters:\n      - sessionType (optional): Filter by session type, supports single or multiple values\n        * Not provided: returns all session types\n        * Single: ?sessionType=regular_mentoring\n        * Multiple: ?sessionType=regular_mentoring\u0026sessionType=gap_analysis\n      - studentId (optional): Filter by specific student ID\n      - mentorId (optional): Filter by specific mentor ID\n      - counselorId (optional): Filter by specific counselor ID (counselor role only)\n      - status (optional): Filter by session status (SCHEDULED, COMPLETED, CANCELLED, etc.)\n      - startDate (optional): Filter by start date\n      - endDate (optional): Filter by end date\n      - page (optional): Pagination page number\n      - limit (optional): Results per page\n\n      Examples:\n      - GET /api/services/sessions (returns all types)\n      - GET /api/services/sessions?sessionType=regular_mentoring\n      - GET /api/services/sessions?sessionType=gap_analysis\u0026studentId=xxx\n      - GET /api/services/sessions?sessionType=regular_mentoring\u0026sessionType=gap_analysis\n      - GET /api/services/sessions?sessionType=ai_career\u0026mentorId=xxx\u0026studentId=yyy\n    ",
+        "operationId": "SessionController_getSessionsList",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mentorId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "counselorId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sessionType",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSessionResponseDto"
+                }
+              }
+            },
+            "description": "Sessions retrieved successfully"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get list of sessions with flexible filtering (unified endpoint)",
+        "tags": [
+          "Counselor Portal - Unified Sessions"
+        ]
+      }
+    },
+    "/api/services/sessions/{id}": {
+      "get": {
+        "description": "Retrieve detailed information about a specific session.",
+        "operationId": "SessionController_getSessionDetail",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            },
+            "description": "Session retrieved successfully"
+          },
+          "404": {
+            "description": "Session not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get session details (unified endpoint)",
+        "tags": [
+          "Counselor Portal - Unified Sessions"
+        ]
+      }
+    },
+    "/api/students/find": {
+      "get": {
+        "operationId": "StudentsController_findStudents",
+        "parameters": [
+          {
+            "description": "Search keyword (searches in both Chinese and English names)",
+            "in": "query",
+            "name": "text",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by counselor ID",
+            "in": "query",
+            "name": "counselorId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by daitou counselor ID for proxy-record student cascading",
+            "in": "query",
+            "name": "proxyCounselorId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by mentor ID",
+            "in": "query",
+            "name": "mentorId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "purpose",
+            "required": false,
+            "schema": {
+              "enum": [
+                "session-booking"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StudentSummaryResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Student results retrieved successfully"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "find students",
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/students/{studentId}/contracts": {
+      "get": {
+        "operationId": "CounselorStudentContractController_getServiceBalance",
+        "parameters": [
+          {
+            "description": "Student ID (UUID). [学生ID(UUID)]",
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "example": "550e8400-e29b-41d4-a716-446655440000",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Service type (optional)",
+            "in": "query",
+            "name": "serviceType",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Contract ID for exact balance lookup",
+            "in": "query",
+            "name": "contractId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Entitlement category (optional)",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "enum": [
+                "session",
+                "document",
+                "placement"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceBalanceResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Service balance retrieved successfully"
+          },
+          "400": {
+            "description": "Invalid student ID format - UUID expected"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get service balance for a student",
+        "tags": [
+          "Counselor Portal"
         ]
       }
     }

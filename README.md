@@ -120,6 +120,8 @@ Codex 可以通过终端直接运行 `sa2`。先在 Codex 中输入“运行 `sa
 ```sh
 mkdir -p "$HOME/.agents/skills"
 ln -s "$PWD/skills/agent-cli-usage" "$HOME/.agents/skills/agent-cli-usage"
+ln -s "$PWD/skills/sa2-book-session" "$HOME/.agents/skills/sa2-book-session"
+ln -s "$PWD/skills/sa2-manage-session" "$HOME/.agents/skills/sa2-manage-session"
 ```
 
 在 Codex 中输入 `/skills` 查看列表，也可以显式调用：
@@ -180,3 +182,22 @@ Linux 原生凭据测试使用隔离的 D-Bus 和 GNOME Keyring。安装这两�
    macOS 可将 `sha256sum` 替换为 `shasum -a 256`。在 GitHub Releases 手动选择该 tag，上传三个二进制归档、`agent-cli-usage.zip` 和 `checksums.txt`，核对附件后发布。Actions 只运行 CI 检查。
 
 实施与验收条件见 [Go 安全重构方案](./docs/plans/active/2026-11-19-go-migration.md)。
+
+
+## 一对一约课
+
+使用 `sa2 sessions --help` 查看参数。登录与业务命令使用同一 API origin。以下示例中的大写 ID 为占位符。
+
+```sh
+sa2 sessions find --kind student --text '学生姓名'
+sa2 sessions find --kind mentor --text '导师姓名'
+sa2 sessions options --student-id S --mentor-id M --contract-id C
+sa2 sessions slots --student-id S --mentor-id M --from 2026-12-01 --to 2026-12-08 --timezone America/New_York --duration 90
+sa2 sessions plan create --student-id S --mentor-id M --contract-id C --type-id T --entitlement External --start 2026-12-02T09:00:00-05:00 --timezone America/New_York --duration 90 --title '简历辅导' --out booking.plan
+sa2 sessions create --plan booking.plan --confirm
+sa2 sessions wait --request-id K --timeout 60s
+```
+
+预览返回权益来源、日历及会议影响。确认前核对时区、备注可见性和权益。改期和取消同样需要生成计划。计划文件仅当前系统用户可读，绑定账号、origin、请求标识及有效期。业务提交超时后用原 requestId 执行 `sa2 sessions operation`，外部结果需要人工核对时保留原标识。
+
+Agent 指引见 [新预约](skills/sa2-book-session/SKILL.md) 和 [查看、改期与取消](skills/sa2-manage-session/SKILL.md)。
