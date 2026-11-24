@@ -70,11 +70,14 @@ func openLock(dir, name string) (*os.File, error) {
 }
 
 func verifyLockHandle(handle windows.Handle, sid, system *windows.SID, directory bool) error {
+	return verifyPrivateHandle(handle, sid, system, directory, true)
+}
+func verifyPrivateHandle(handle windows.Handle, sid, system *windows.SID, directory bool, empty bool) error {
 	var info windows.ByHandleFileInformation
 	if err := windows.GetFileInformationByHandle(handle, &info); err != nil ||
 		info.FileAttributes&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0 ||
 		directory != (info.FileAttributes&windows.FILE_ATTRIBUTE_DIRECTORY != 0) ||
-		!directory && (info.FileSizeHigh != 0 || info.FileSizeLow != 0 || info.NumberOfLinks != 1) {
+		!directory && (empty && (info.FileSizeHigh != 0 || info.FileSizeLow != 0) || info.NumberOfLinks != 1) {
 		return ErrUnsafeLock
 	}
 	sd, err := windows.GetSecurityInfo(handle, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION|windows.DACL_SECURITY_INFORMATION)

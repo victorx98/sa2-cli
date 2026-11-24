@@ -85,7 +85,15 @@ func TestChildProcess(t *testing.T) {
 		t.Fatal("invalid test CA")
 	}
 	client := api.NewHTTPClient()
-	client.Transport.(*http.Transport).TLSClientConfig.RootCAs = roots
+	transport := client.Transport.(*http.Transport)
+	transport.TLSClientConfig.RootCAs = roots
+	// Route plain HTTP to the fixture even when testing the fixed development port.
+	transport.Proxy = func(r *http.Request) (*url.URL, error) {
+		if r.URL.Scheme == "http" {
+			return url.Parse(os.Getenv("SA2_API_URL"))
+		}
+		return nil, nil
+	}
 	if os.Getenv("SA2_TEST_TIMEOUT") == "1" {
 		client.Timeout = 500 * time.Millisecond
 	}
@@ -204,6 +212,48 @@ func reply(w http.ResponseWriter, token string) {
 			"roles": []map[string]string{{"enName": "student"}},
 		},
 	})
+}
+
+func TestDevelopmentOrigin(t *testing.T) {
+	h := startHarness(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.String() != "http://localhost:8094/api/auth/login" {
+			t.Errorf("unexpected development request: %s %s", r.Method, r.URL)
+		}
+		reply(w, mockRefresh)
+	})
+	h.expect(h.command(mockPassword, "", "--dev", "login", "--email", "243099926@qq.com", "--password-stdin"), 0, "")
+	if _, err := os.Stat(filepath.Join(h.dir, "fixture-vault", session.Key("http://localhost:8094"))); err != nil {
+		t.Fatal("missing session for the local API origin", err)
+	}
+	h.expect(h.command("", "", "whoami"), 3, "LOGIN_REQUIRED")
+	h.expect(h.command("", "", "--dev", "logout"), 0, "")
+	h.expect(h.command("", "", "--dev", "sessions", "list"), 3, "LOGIN_REQUIRED")
+}
+
+func TestDevelopmentFlagsSkipUserConfiguration(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		exit int
+		want string
+	}{
+		{[]string{"--dev", "--help"}, 0, "http://localhost:8094"},
+		{[]string{"--dev", "--api-url", "https://sa2.mentorx.org", "sessions", "list"}, 2, "either --dev or --api-url"},
+		{[]string{"--dev", "whoami", "--api-url=http://localhost:8094"}, 2, "either --dev or --api-url"},
+		{[]string{"--dev", "whoami", "--api-url="}, 2, "either --dev or --api-url"},
+		{[]string{"whoami", "--dev"}, 2, "INVALID_ARGUMENT"},
+		{[]string{"--dev", "login", "--feishu"}, 2, "HTTPS"},
+	} {
+		t.Run(strings.Join(tc.args, " "), func(t *testing.T) {
+			var out bytes.Buffer
+			app := App{Out: &out, LoadConfig: func() (config.Settings, error) {
+				t.Fatal("unexpected access to the user config")
+				return config.Settings{}, nil
+			}}
+			if exit := app.Run(t.Context(), tc.args); exit != tc.exit || !strings.Contains(out.String(), tc.want) {
+				t.Fatalf("exit %d, output %q; want exit %d containing %q", exit, &out, tc.exit, tc.want)
+			}
+		})
+	}
 }
 
 func TestProcessSessionLifecycle(t *testing.T) {

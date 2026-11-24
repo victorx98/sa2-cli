@@ -66,14 +66,21 @@ func (s Service) login(ctx context.Context, origin string, exchange func() (api.
 		}
 		return api.Identity{}, err
 	}
+	defer clear(result.AccessToken)
 	return s.save(context.WithoutCancel(ctx), key, result)
 }
 
 func (s Service) Whoami(ctx context.Context, origin string) (api.Identity, error) {
+	result, err := s.Renew(ctx, origin)
+	defer clear(result.AccessToken)
+	return result.Identity, err
+}
+
+func (s Service) Renew(ctx context.Context, origin string) (api.Result, error) {
 	key := session.Key(origin)
 	unlock, err := s.Locks.Acquire(ctx, key)
 	if err != nil {
-		return api.Identity{}, err
+		return api.Result{}, err
 	}
 	defer unlock()
 
@@ -81,25 +88,31 @@ func (s Service) Whoami(ctx context.Context, origin string) (api.Identity, error
 	defer clear(current)
 	pending := []byte{credentialVersion, statePending}
 	if errors.Is(err, session.ErrNotFound) || err == nil && bytes.Equal(current, pending) {
-		return api.Identity{}, ErrLoginRequired
+		return api.Result{}, ErrLoginRequired
 	}
 	if err != nil || len(current) < 3 || current[0] != credentialVersion || current[1] != stateReady {
-		return api.Identity{}, session.ErrUnavailable
+		return api.Result{}, session.ErrUnavailable
 	}
 	if err := ctx.Err(); err != nil {
-		return api.Identity{}, err
+		return api.Result{}, err
 	}
 	if err := s.Vault.Write(ctx, key, pending); err != nil {
-		return api.Identity{}, session.ErrUnavailable
+		return api.Result{}, session.ErrUnavailable
 	}
 
 	// Once pending is committed, an ambiguous result must not restore the used token.
 	result, err := s.API.Refresh(ctx, origin, current[2:])
 	clear(current)
 	if err != nil {
-		return api.Identity{}, ErrLoginRequired
+		return api.Result{}, ErrLoginRequired
 	}
-	return s.save(context.WithoutCancel(ctx), key, result)
+	_, err = s.save(context.WithoutCancel(ctx), key, result)
+	if err != nil {
+		clear(result.AccessToken)
+		return api.Result{}, err
+	}
+	result.RefreshToken = nil
+	return result, nil
 }
 
 func (s Service) Logout(ctx context.Context, origin string) error {

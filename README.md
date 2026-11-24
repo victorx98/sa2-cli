@@ -17,7 +17,7 @@ Windows 源码构建使用 `go build -trimpath -o sa2.exe ./cmd/sa2`。
 
 ## API 地址配置
 
-缺少配置文件时，`sa2` 默认通过生产站点 `https://sa2.mentorx.org` 的反向代理访问 SA2 API，并在当前用户的配置目录下创建 `sa2-cli/config.json`。之后每次启动都会读取该文件，可用编辑器修改并保存 API 地址。
+普通命令默认通过生产站点 `https://sa2.mentorx.org` 的反向代理访问 `/api/...`。首次运行普通命令时，CLI 会在当前用户的配置目录下创建 `sa2-cli/config.json`，之后可编辑该文件修改默认 API 地址。
 
 | 系统 | 用户配置目录 |
 | --- | --- |
@@ -31,7 +31,9 @@ Windows 源码构建使用 `go build -trimpath -o sa2.exe ./cmd/sa2`。
 }
 ```
 
-优先级从高到低为 `--api-url`、`SA2_API_URL` 环境变量、配置文件。HTTP 只允许 `localhost` 或环回 IP，其他地址使用 HTTPS。地址可含端口，省略账号凭据、路径、查询和片段。
+优先级从高到低为 `--api-url`、`SA2_API_URL` 环境变量、配置文件。指定 `--api-url` 时跳过配置文件。查看帮助或版本也无需读取配置。HTTP 只允许 `localhost` 或环回 IP，其他地址使用 HTTPS。地址可含端口，省略账号凭据、路径、查询和片段。
+
+本地开发时将全局选项 `--dev` 放在子命令前，例如 `sa2 --dev whoami`。它直连 `http://localhost:8094` 的 sa2-api，跳过 `SA2_API_URL` 和用户配置文件。`--dev` 与 `--api-url` 互斥。登录和后续命令使用相同的地址，凭据按地址隔离。
 
 ## 命令示例
 
@@ -53,7 +55,7 @@ sa2 login --email 'you@example.com' --password-stdin < "$SA2_PASSWORD_FILE"
 sa2 login --feishu
 ```
 
-在桌面终端运行时，CLI 会尝试打开浏览器里的独立飞书扫码页。也可以在运行 CLI 的电脑上手动打开终端显示的链接。用飞书 App 扫码后，网页会回到本机 CLI，终端会显示结果。链接五分钟内有效，按 Ctrl+C 可取消。飞书登录沿用网页的员工账号检查。
+飞书登录需要 HTTPS。CLI 打开同一域名上由 sa2-ui 提供的 `/auth/cli` 扫码页，收到授权码后向 sa2-api 的 `/api/auth/feishu/login` 换取会话。也可以在运行 CLI 的电脑上手动打开终端显示的链接。链接五分钟内有效，按 Ctrl+C 可取消。飞书登录沿用网页的员工账号检查。本地 HTTP 开发请使用 `sa2 --dev login --email EMAIL`。
 
 ### 查看当前身份
 
@@ -120,13 +122,15 @@ Codex 可以通过终端直接运行 `sa2`。先在 Codex 中输入“运行 `sa
 ```sh
 mkdir -p "$HOME/.agents/skills"
 ln -s "$PWD/skills/agent-cli-usage" "$HOME/.agents/skills/agent-cli-usage"
+ln -s "$PWD/skills/sa2-book-session" "$HOME/.agents/skills/sa2-book-session"
+ln -s "$PWD/skills/sa2-manage-session" "$HOME/.agents/skills/sa2-manage-session"
 ```
 
 在 Codex 中输入 `/skills` 查看列表，也可以显式调用：
 
 > $agent-cli-usage 请运行 `sa2 --help`，告诉我支持哪些登录方式。
 
-登录后，可以直接说“查看我在本地 SA2 环境 `http://localhost:8094` 的身份和角色”。对应命令为 `sa2 whoami --api-url http://localhost:8094`。登录时使用同一个 API 地址，并确保 Codex 能访问登录用户的系统凭据库。`whoami` 会轮换令牌，验证安装时使用 `--version` 或 `--help` 即可。
+登录后，可以直接说“查看我在本地 SA2 环境 `http://localhost:8094` 的身份和角色”。对应命令为 `sa2 --dev whoami`。登录时使用同一个 API 地址，并确保 Codex 能访问登录用户的系统凭据库。`whoami` 会轮换令牌，验证安装时使用 `--version` 或 `--help` 即可。
 
 ## 开发
 
@@ -143,6 +147,8 @@ Linux 原生凭据测试使用隔离的 D-Bus 和 GNOME Keyring。安装这两�
 主分支 CI 默认校验仓库内的 OpenAPI 快照。可配置 `SA2_API_READ_TOKEN` 核对私有 API 仓库的固定提交。 [OpenAPI 契约与凭据配置](./contracts/README.md)
 
 ## 手动发布
+
+发布前从仓库根目录运行 `go run ./tools/contract -runtime https://sa2.mentorx.org`（本地改用 `http://localhost:8094`）。检查只读取公开的 `/api/docs-json`，逐项比较 CLI 使用的操作、参数与关联数据结构，同时报告全部缺失和差异。源码快照仍用 `go run ./tools/contract -check` 验证。
 
 1. 确认目标提交的 CI 已通过，在预发布验证目标宿主的认证链路和峰值续期负载，再由维护者创建发行 tag。
 2. 在 Linux、macOS 和 Windows 的 amd64 环境中检出同一 tag。从仓库根目录用 Bash 执行以下命令，Windows 可使用 Git Bash。
@@ -180,3 +186,22 @@ Linux 原生凭据测试使用隔离的 D-Bus 和 GNOME Keyring。安装这两�
    macOS 可将 `sha256sum` 替换为 `shasum -a 256`。在 GitHub Releases 手动选择该 tag，上传三个二进制归档、`agent-cli-usage.zip` 和 `checksums.txt`，核对附件后发布。Actions 只运行 CI 检查。
 
 实施与验收条件见 [Go 安全重构方案](./docs/plans/active/2026-11-19-go-migration.md)。
+
+
+## 一对一约课
+
+使用 `sa2 sessions --help` 查看参数。登录与业务命令使用同一 API origin。本地用 `sa2 --dev sessions` 执行预约预览和提交时，sa2-api 的 `SESSION_BOOKING_ORIGIN` 需与 `http://localhost:8094` 完全一致。以下示例中的大写 ID 为占位符。
+
+```sh
+sa2 sessions find --kind student --text '学生姓名'
+sa2 sessions find --kind mentor --text '导师姓名'
+sa2 sessions options --student-id S --mentor-id M --contract-id C
+sa2 sessions slots --student-id S --mentor-id M --from 2026-12-01 --to 2026-12-08 --timezone America/New_York --duration 90
+sa2 sessions plan create --student-id S --mentor-id M --contract-id C --type-id T --entitlement External --start 2026-12-02T09:00:00-05:00 --timezone America/New_York --duration 90 --title '简历辅导' --out booking.plan
+sa2 sessions create --plan booking.plan --confirm
+sa2 sessions wait --request-id K --timeout 60s
+```
+
+每次预览须为 `--out` 指定新文件名。预览被阻止时命令以非零状态退出，并报告阻止原因。成功的预览返回权益来源、日历及会议影响。确认前核对时区、备注可见性和权益。改期和取消同样需要生成计划。计划文件仅当前系统用户可读，绑定账号、origin、请求标识及有效期。业务提交超时后用原 requestId 执行 `sa2 sessions operation`，外部结果需要人工核对时保留原标识。
+
+Agent 指引见 [新预约](skills/sa2-book-session/SKILL.md) 和 [查看、改期与取消](skills/sa2-manage-session/SKILL.md)。

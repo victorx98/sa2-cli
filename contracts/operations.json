@@ -1,5 +1,16 @@
 [
   {"method": "post", "path": "/api/auth/feishu/login"},
   {"method": "post", "path": "/api/auth/login"},
-  {"method": "post", "path": "/api/auth/refresh"}
+  {"method": "post", "path": "/api/auth/refresh"},
+  {"method": "get", "path": "/api/contracts/students/{studentId}"},
+  {"method": "get", "path": "/api/mentors/find"},
+  {"method": "get", "path": "/api/services/session-bookings/availability"},
+  {"method": "post", "path": "/api/services/session-bookings/commit"},
+  {"method": "get", "path": "/api/services/session-bookings/operations/{requestId}"},
+  {"method": "post", "path": "/api/services/session-bookings/preview"},
+  {"method": "get", "path": "/api/services/session-types"},
+  {"method": "get", "path": "/api/services/sessions"},
+  {"method": "get", "path": "/api/services/sessions/{id}"},
+  {"method": "get", "path": "/api/students/find"},
+  {"method": "get", "path": "/api/students/{studentId}/contracts"}
 ]

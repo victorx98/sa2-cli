@@ -28,6 +28,7 @@ type Identity struct {
 }
 
 type Result struct {
+	AccessToken  []byte `json:"-"`
 	Identity     Identity
 	RefreshToken []byte
 }
@@ -117,6 +118,7 @@ func decodeSession(body io.Reader) (Result, error) {
 		return Result{}, ErrInvalidResponse
 	}
 	var response struct {
+		AccessToken  string `json:"accessToken"`
 		RefreshToken string `json:"refreshToken"`
 		User         struct {
 			ID    string  `json:"id"`
@@ -138,5 +140,6 @@ func decodeSession(body io.Reader) (Result, error) {
 	return Result{
 		Identity:     Identity{ID: response.User.ID, Email: response.User.Email, Roles: roles},
 		RefreshToken: []byte(response.RefreshToken),
+		AccessToken:  []byte(response.AccessToken),
 	}, nil
 }

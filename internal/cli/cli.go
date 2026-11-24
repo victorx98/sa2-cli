@@ -13,6 +13,7 @@ import (
 
 	"github.com/victorx98/sa2-cli/internal/api"
 	"github.com/victorx98/sa2-cli/internal/auth"
+	"github.com/victorx98/sa2-cli/internal/booking"
 	"github.com/victorx98/sa2-cli/internal/config"
 	"github.com/victorx98/sa2-cli/internal/session"
 )
@@ -33,8 +34,10 @@ type App struct {
 }
 
 type options struct {
+	sessions  booking.Command
 	command   string
-	origin    string
+	apiURL    *string
+	dev       bool
 	email     string
 	fromStdin bool
 	feishu    bool
@@ -42,14 +45,16 @@ type options struct {
 	version   bool
 }
 
-const helpText = `sa2 [--api-url ORIGIN] <command>
+const helpText = `sa2 [--dev | --api-url ORIGIN] <command>
 
   login --email EMAIL [--password-stdin]  Sign in using an email and password
   login --feishu                         Scan with Feishu in a browser on this computer
   whoami                                Refresh the session and show the identity
   logout                                Clear the local session for this origin
+  sessions                              Find, preview, commit and track session bookings
 
-  --api-url ORIGIN                       Overrides SA2_API_URL and config.json
+  --dev                                 Use local sa2-api at ` + config.DevelopmentOrigin + `
+  --api-url ORIGIN                      Overrides SA2_API_URL and config.json
   --help                                Show help
   --version                             Show the CLI version
 
@@ -58,13 +63,16 @@ const helpText = `sa2 [--api-url ORIGIN] <command>
 `
 
 func (a App) Run(ctx context.Context, args []string) int {
-	settings, err := a.LoadConfig()
-	if err != nil {
-		return a.writeError(errorDetail{"CONFIG_ERROR", err.Error()}, 1)
-	}
-	opts, err := parse(args, settings.Origin)
+	opts, err := parse(args)
 	if err != nil {
 		return a.failure(err)
+	}
+	if opts.dev && opts.apiURL != nil {
+		return a.writeError(errorDetail{"INVALID_ARGUMENT", "Choose either --dev or --api-url."}, 2)
+	}
+	if opts.help && opts.command == "sessions" {
+		fmt.Fprint(a.Out, booking.Help)
+		return 0
 	}
 	if opts.help {
 		fmt.Fprint(a.Out, helpText)
@@ -75,7 +83,17 @@ func (a App) Run(ctx context.Context, args []string) int {
 		return 0
 	}
 
-	origin, err := api.Origin(opts.origin)
+	target := config.DevelopmentOrigin
+	if opts.apiURL != nil {
+		target = *opts.apiURL
+	} else if !opts.dev {
+		settings, err := a.LoadConfig()
+		if err != nil {
+			return a.writeError(errorDetail{"CONFIG_ERROR", err.Error()}, 1)
+		}
+		target = settings.Origin
+	}
+	origin, err := api.Origin(target)
 	if err != nil {
 		return a.failure(err)
 	}
@@ -90,6 +108,15 @@ func (a App) Run(ctx context.Context, args []string) int {
 	service := auth.Service{API: a.API, Vault: vault, Locks: locks}
 
 	switch opts.command {
+	case "sessions":
+		result, err := service.Renew(ctx, origin)
+		if err != nil {
+			return a.failure(err)
+		}
+		defer clear(result.AccessToken)
+		client := booking.Client{API: a.API, Origin: origin, Actor: result.Identity.ID, Token: result.AccessToken}
+		data, err := client.Run(ctx, opts.sessions)
+		return a.result(data, err)
 	case "login":
 		if opts.feishu {
 			identity, err := service.FeishuLogin(ctx, origin, a.Err)
@@ -110,11 +137,16 @@ func (a App) Run(ctx context.Context, args []string) int {
 	}
 }
 
-func parse(args []string, defaultOrigin string) (options, error) {
-	opts := options{origin: defaultOrigin}
+func parse(args []string) (options, error) {
+	var opts options
+	setAPIURL := func(value string) error {
+		opts.apiURL = &value
+		return nil
+	}
 	root := flag.NewFlagSet("sa2", flag.ContinueOnError)
 	root.SetOutput(io.Discard)
-	root.StringVar(&opts.origin, "api-url", defaultOrigin, "")
+	root.BoolVar(&opts.dev, "dev", false, "")
+	root.Func("api-url", "", setAPIURL)
 	root.BoolVar(&opts.version, "version", false, "")
 	root.BoolVar(&opts.version, "v", false, "")
 	if err := root.Parse(args); err != nil {
@@ -133,6 +165,17 @@ func parse(args []string, defaultOrigin string) (options, error) {
 	}
 	opts.command = root.Arg(0)
 	switch opts.command {
+	case "sessions":
+		cmd, err := booking.Parse(root.Args()[1:])
+		if errors.Is(err, booking.ErrHelp) {
+			opts.help = true
+			return opts, nil
+		}
+		if err != nil {
+			return opts, errArgument
+		}
+		opts.sessions = cmd
+		return opts, nil
 	case "login", "whoami", "logout":
 	default:
 		return opts, errArgument
@@ -140,7 +183,7 @@ func parse(args []string, defaultOrigin string) (options, error) {
 
 	command := flag.NewFlagSet(opts.command, flag.ContinueOnError)
 	command.SetOutput(io.Discard)
-	command.StringVar(&opts.origin, "api-url", opts.origin, "")
+	command.Func("api-url", "", setAPIURL)
 	if opts.command == "login" {
 		command.StringVar(&opts.email, "email", "", "")
 		command.BoolVar(&opts.fromStdin, "password-stdin", false, "")
@@ -185,6 +228,22 @@ func (a App) result(data any, err error) int {
 }
 
 func (a App) failure(err error) int {
+	var problem *booking.Failure
+	if errors.As(err, &problem) {
+		_ = json.NewEncoder(a.Out).Encode(map[string]any{"error": problem})
+		return 1
+	}
+	var business *api.BusinessError
+	if errors.As(err, &business) {
+		return a.writeError(errorDetail{business.Code, "SA2 rejected the request."}, 1)
+	}
+	if errors.Is(err, session.ErrPlanExists) {
+		return a.writeError(errorDetail{"PLAN_FILE_EXISTS", "Choose a new --out path for this preview."}, 2)
+	}
+	if errors.Is(err, session.ErrPlanFile) {
+		return a.writeError(errorDetail{"INVALID_PLAN_FILE", "Use a private plan for this account, origin and action."}, 2)
+	}
+
 	detail, exit := describeError(err)
 	return a.writeError(detail, exit)
 }
@@ -203,6 +262,8 @@ type errorDetail struct {
 
 func describeError(err error) (errorDetail, int) {
 	switch {
+	case errors.Is(err, api.ErrBookingAPINotDeployed):
+		return errorDetail{"BOOKING_API_NOT_DEPLOYED", err.Error()}, 1
 	case errors.Is(err, api.ErrInvalidOrigin):
 		return errorDetail{"INVALID_ARGUMENT", "Use an HTTPS origin or a loopback HTTP origin in --api-url, SA2_API_URL, or config.json."}, 2
 	case errors.Is(err, errPasswordMode):

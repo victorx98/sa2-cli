@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -39,5 +40,27 @@ func TestProjectDependencies(t *testing.T) {
 	}
 	if _, err := project(doc, []operation{{Method: "delete", Path: "/used"}}); err == nil {
 		t.Fatal("projection accepted a missing operation")
+	}
+}
+
+func TestRuntimeChecksAllOperationsAndReferencedProperties(t *testing.T) {
+	var pinned, live map[string]any
+	docs := `{"openapi":"3.0.0","info":{},"paths":{"/book":{"get":{"responses":{"200":{"$ref":"#/components/schemas/Receipt"}}}},"/other":{"post":{}}},"components":{"schemas":{"Receipt":{"description":"old","properties":{"description":{"type":"string"}}}}}}`
+	for _, target := range []*map[string]any{&pinned, &live} {
+		if err := json.Unmarshal([]byte(docs), target); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ops := []operation{{"get", "/book"}, {"post", "/other"}}
+	receipt := object(object(object(live["components"])["schemas"])["Receipt"])
+	receipt["description"] = "new documentation"
+	if err := compareOperations(ops, pinned, live); err != nil {
+		t.Fatal(err)
+	}
+	delete(object(receipt["properties"]), "description")
+	delete(object(live["paths"]), "/other")
+	err := compareOperations(ops, pinned, live)
+	if err == nil || !strings.Contains(err.Error(), "GET /book") || !strings.Contains(err.Error(), "POST /other") {
+		t.Fatalf("missing independent differences: %v", err)
 	}
 }
