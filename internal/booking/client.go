@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -284,11 +285,19 @@ func (c Client) operation(ctx context.Context, cmd Command) (any, error) {
 				return nil, api.ErrInvalidResponse
 			}
 		}
+		var he *api.BusinessError
+		if errors.As(err, &he) && he.Status == http.StatusNotFound {
+			if he.Code != "OPERATION_NOT_FOUND" {
+				return nil, &Failure{Code: he.Code, Message: "SA2 could not retrieve the booking operation.", RequestID: id}
+			}
+			if !wait {
+				return nil, &Failure{Code: he.Code, Message: "No receipt is visible for this request ID.", RequestID: id}
+			}
+		}
 		if !wait {
 			return out, err
 		}
-		var he *api.BusinessError
-		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, api.ErrUnavailable) && !(errors.As(err, &he) && (he.Status == 404 || he.Status >= 500)) {
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, api.ErrUnavailable) && !(he != nil && (he.Status == http.StatusNotFound || he.Status >= 500)) {
 			return nil, err
 		}
 		select {

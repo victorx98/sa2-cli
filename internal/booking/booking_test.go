@@ -155,6 +155,33 @@ func TestWaitStopsOnMissingBookingRoute(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestOperationLookupPreservesReceiptAndResourceErrors(t *testing.T) {
+	for _, tc := range []struct{ name, code string }{
+		{"operation", "OPERATION_NOT_FOUND"},
+		{"wait", "NOT_FOUND"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd, err := Parse([]string{tc.name, "--request-id", fakeID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			calls := 0
+			c := Client{Origin: "https://booking.invalid", Token: []byte("fake"), API: api.Client{HTTP: &http.Client{Transport: transport(func(*http.Request) (*http.Response, error) {
+				calls++
+				if calls != 1 {
+					t.Fatal("retried a terminal lookup")
+				}
+				return reply(404, map[string]string{"code": tc.code})
+			})}}}
+			_, err = c.Run(context.Background(), cmd)
+			var failure *Failure
+			if !errors.As(err, &failure) || failure.Code != tc.code || failure.RequestID != fakeID {
+				t.Fatal(err)
+			}
+		})
+	}
+}
 func TestPrivatePlanPermissions(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX file mode test")
