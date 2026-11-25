@@ -1153,6 +1153,264 @@
         ],
         "type": "object"
       },
+      "MonthlyServiceReportResponseDto": {
+        "properties": {
+          "applicationStatsSnapshot": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "autoSectionsRefreshedAt": {
+            "nullable": true,
+            "type": "string"
+          },
+          "autoSectionsRefreshedBy": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "nullable": true,
+            "type": "string"
+          },
+          "createdBy": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "externalMentorTrainingSnapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "internalCounselorSessionsSnapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "interviewProgress": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "monthlyMilestonesSnapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "monthlyServiceDataSnapshot": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "monthlySummary": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "nextMonthPlans": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "overallPlan": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "periodEnd": {
+            "nullable": true,
+            "type": "string"
+          },
+          "periodStart": {
+            "nullable": true,
+            "type": "string"
+          },
+          "profileRadarsSnapshot": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "reportPeriod": {
+            "example": "2026-04",
+            "type": "string"
+          },
+          "sectionVisibility": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "studentBasicInfoSnapshot": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedBy": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "studentId",
+          "reportPeriod",
+          "studentBasicInfoSnapshot",
+          "profileRadarsSnapshot",
+          "externalMentorTrainingSnapshot",
+          "internalCounselorSessionsSnapshot",
+          "applicationStatsSnapshot",
+          "monthlyServiceDataSnapshot",
+          "monthlyMilestonesSnapshot",
+          "sectionVisibility",
+          "overallPlan",
+          "nextMonthPlans",
+          "interviewProgress",
+          "monthlySummary"
+        ],
+        "type": "object"
+      },
+      "MonthlyServiceReportStoredFieldsDto": {
+        "properties": {
+          "applicationStatsSnapshot": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "autoSectionsRefreshedAt": {
+            "nullable": true,
+            "type": "string"
+          },
+          "autoSectionsRefreshedBy": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "nullable": true,
+            "type": "string"
+          },
+          "createdBy": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "externalMentorTrainingSnapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "internalCounselorSessionsSnapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "interviewProgress": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "monthlyMilestonesSnapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "monthlyServiceDataSnapshot": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "monthlySummary": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "nextMonthPlans": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "overallPlan": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "periodEnd": {
+            "nullable": true,
+            "type": "string"
+          },
+          "periodStart": {
+            "nullable": true,
+            "type": "string"
+          },
+          "profileRadarsSnapshot": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "reportPeriod": {
+            "example": "2026-04",
+            "type": "string"
+          },
+          "sectionVisibility": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "studentBasicInfoSnapshot": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedBy": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "studentId",
+          "reportPeriod",
+          "studentBasicInfoSnapshot",
+          "profileRadarsSnapshot",
+          "externalMentorTrainingSnapshot",
+          "internalCounselorSessionsSnapshot",
+          "applicationStatsSnapshot",
+          "monthlyServiceDataSnapshot",
+          "monthlyMilestonesSnapshot",
+          "sectionVisibility",
+          "overallPlan",
+          "nextMonthPlans",
+          "interviewProgress",
+          "monthlySummary"
+        ],
+        "type": "object"
+      },
       "PaginatedSessionResponseDto": {
         "properties": {
           "data": {
@@ -1180,6 +1438,45 @@
           "page",
           "pageSize",
           "totalPages"
+        ],
+        "type": "object"
+      },
+      "PatchMonthlyServiceReportMilestoneDto": {
+        "properties": {
+          "expectedUpdatedAt": {
+            "description": "Exact updatedAt returned by the preceding GET; stale writes return 409",
+            "example": "2026-08-05T23:18:49.843Z",
+            "format": "date-time",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Rich text HTML, as in existing milestones. Omit to preserve; empty string clears",
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "reportPeriod": {
+            "description": "Must match the stored report period",
+            "example": "2026-06",
+            "pattern": "^(20[0-9]{2}|2100)-(0[1-9]|1[0-2])$",
+            "type": "string"
+          },
+          "status": {
+            "description": "Omit to preserve the current status; null and display placeholders are rejected",
+            "enum": [
+              "not_started",
+              "done",
+              "on_track",
+              "needs_attention",
+              "at_risk",
+              "critical"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "reportPeriod",
+          "expectedUpdatedAt"
         ],
         "type": "object"
       },
@@ -2088,6 +2385,139 @@
         "summary": "find mentor",
         "tags": [
           "Mentors"
+        ]
+      }
+    },
+    "/api/reports/students/{studentId}/monthly-service-reports": {
+      "get": {
+        "description": "Returns stored snapshots and counselor-edited fields from monthly_service_reports.",
+        "operationId": "MonthlyServiceReportController_getMonthlyServiceReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Report year",
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "example": 2026,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Report month (1-12)",
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "example": 4,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyServiceReportResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get monthly service report snapshot",
+        "tags": [
+          "Monthly Service Report"
+        ]
+      }
+    },
+    "/api/reports/students/{studentId}/monthly-service-reports/{reportId}/milestones/{milestoneKey}": {
+      "patch": {
+        "description": "Updates only status and/or notes for an exact, unique stored key. Omitted fields and other milestones remain unchanged. Requires reportPeriod and the exact updatedAt from GET. No creation, deletion or whole-array replacement. Conditional update rejects concurrent changes.",
+        "operationId": "MonthlyServiceReportController_patchMonthlyServiceReportMilestone",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reportId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exact key from monthlyMilestonesSnapshot",
+            "in": "path",
+            "name": "milestoneKey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchMonthlyServiceReportMilestoneDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyServiceReportStoredFieldsDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid field, null, status or empty patch"
+          },
+          "404": {
+            "description": "REPORT_NOT_FOUND or MILESTONE_NOT_FOUND"
+          },
+          "409": {
+            "description": "STALE_REPORT or AMBIGUOUS_MILESTONE_KEY"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Patch one existing monthly report milestone",
+        "tags": [
+          "Monthly Service Report"
         ]
       }
     },

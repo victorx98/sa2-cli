@@ -57,13 +57,15 @@ func (c Client) Business(ctx context.Context, origin string, access []byte, meth
 		req.Header.Set(k, v)
 	}
 	commit := path == "/api/services/session-bookings/commit"
+	milestonePatch := method == "PATCH" && strings.HasPrefix(path, "/api/reports/students/") && strings.Contains(path, "/monthly-service-reports/") && strings.Contains(path, "/milestones/")
+	uncertainWrite := commit || milestonePatch
 	// Go may transparently replay requests carrying an idempotency key on a stale connection.
-	if commit {
+	if uncertainWrite {
 		req.GetBody = nil
 	}
 	res, err := c.HTTP.Do(req)
 	if err != nil {
-		if commit {
+		if uncertainWrite {
 			return ErrOutcomeUnknown
 		}
 		if ctx.Err() != nil {
@@ -75,7 +77,7 @@ func (c Client) Business(ctx context.Context, origin string, access []byte, meth
 	raw, err := io.ReadAll(io.LimitReader(res.Body, maxResponseSize+1))
 	defer clear(raw)
 	if err != nil || len(raw) > maxResponseSize {
-		if commit {
+		if uncertainWrite {
 			return ErrOutcomeUnknown
 		}
 		return ErrInvalidResponse
@@ -84,7 +86,7 @@ func (c Client) Business(ctx context.Context, origin string, access []byte, meth
 		if res.StatusCode == 401 {
 			return ErrRejected
 		}
-		if commit && (res.StatusCode >= 500 || res.StatusCode == 408) {
+		if uncertainWrite && (res.StatusCode >= 500 || res.StatusCode == 408) {
 			return ErrOutcomeUnknown
 		}
 		var detail struct {
@@ -97,6 +99,9 @@ func (c Client) Business(ctx context.Context, origin string, access []byte, meth
 		if res.StatusCode == http.StatusNotFound && strings.HasPrefix(path, "/api/services/session-bookings/") &&
 			(detail.Message == "Cannot "+method+" "+path || detail.Message == "Cannot "+method+" "+req.URL.RequestURI()) {
 			return ErrBookingAPINotDeployed
+		}
+		if milestonePatch && res.StatusCode == http.StatusNotFound && (detail.Message == "Cannot "+method+" "+path || detail.Message == "Cannot "+method+" "+req.URL.RequestURI()) {
+			return &BusinessError{res.StatusCode, "MILESTONE_API_NOT_DEPLOYED"}
 		}
 		code := detail.Code
 		if !safeCode.MatchString(code) {
@@ -131,7 +136,7 @@ func (c Client) Business(ctx context.Context, origin string, access []byte, meth
 		return &BusinessError{res.StatusCode, code}
 	}
 	if err = json.Unmarshal(raw, output); err != nil {
-		if commit {
+		if uncertainWrite {
 			return ErrOutcomeUnknown
 		}
 		return ErrInvalidResponse

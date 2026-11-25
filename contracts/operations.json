@@ -12,5 +12,7 @@
   {"method": "get", "path": "/api/services/sessions"},
   {"method": "get", "path": "/api/services/sessions/{id}"},
   {"method": "get", "path": "/api/students/find"},
-  {"method": "get", "path": "/api/students/{studentId}/contracts"}
+  {"method": "get", "path": "/api/students/{studentId}/contracts"},
+  {"method": "get", "path": "/api/reports/students/{studentId}/monthly-service-reports"},
+  {"method": "patch", "path": "/api/reports/students/{studentId}/monthly-service-reports/{reportId}/milestones/{milestoneKey}"}
 ]
