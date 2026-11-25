@@ -15,6 +15,7 @@ import (
 	"github.com/victorx98/sa2-cli/internal/auth"
 	"github.com/victorx98/sa2-cli/internal/booking"
 	"github.com/victorx98/sa2-cli/internal/config"
+	"github.com/victorx98/sa2-cli/internal/reports"
 	"github.com/victorx98/sa2-cli/internal/session"
 )
 
@@ -34,6 +35,7 @@ type App struct {
 }
 
 type options struct {
+	reports   reports.Command
 	sessions  booking.Command
 	command   string
 	apiURL    *string
@@ -52,6 +54,7 @@ const helpText = `sa2 [--dev | --api-url ORIGIN] <command>
   whoami                                Refresh the session and show the identity
   logout                                Clear the local session for this origin
   sessions                              Find, preview, commit and track session bookings
+  reports                               Read monthly reports and extract milestones
 
   --dev                                 Use local sa2-api at ` + config.DevelopmentOrigin + `
   --api-url ORIGIN                      Overrides SA2_API_URL and config.json
@@ -70,6 +73,10 @@ func (a App) Run(ctx context.Context, args []string) int {
 	if opts.dev && opts.apiURL != nil {
 		return a.writeError(errorDetail{"INVALID_ARGUMENT", "Choose either --dev or --api-url."}, 2)
 	}
+	if opts.help && opts.command == "reports" {
+		fmt.Fprint(a.Out, reports.Help)
+		return 0
+	}
 	if opts.help && opts.command == "sessions" {
 		fmt.Fprint(a.Out, booking.Help)
 		return 0
@@ -77,6 +84,10 @@ func (a App) Run(ctx context.Context, args []string) int {
 	if opts.help {
 		fmt.Fprint(a.Out, helpText)
 		return 0
+	}
+	if opts.command == "reports" && opts.reports.Action == "schema" {
+		data, err := reports.MilestoneSchema()
+		return a.result(data, err)
 	}
 	if opts.version {
 		fmt.Fprintln(a.Out, a.Version)
@@ -108,6 +119,15 @@ func (a App) Run(ctx context.Context, args []string) int {
 	service := auth.Service{API: a.API, Vault: vault, Locks: locks}
 
 	switch opts.command {
+	case "reports":
+		result, err := service.Renew(ctx, origin)
+		if err != nil {
+			return a.failure(err)
+		}
+		defer clear(result.AccessToken)
+		client := reports.Client{API: a.API, Origin: origin, Token: result.AccessToken}
+		data, err := client.Run(ctx, opts.reports)
+		return a.result(data, err)
 	case "sessions":
 		result, err := service.Renew(ctx, origin)
 		if err != nil {
@@ -165,6 +185,17 @@ func parse(args []string) (options, error) {
 	}
 	opts.command = root.Arg(0)
 	switch opts.command {
+	case "reports":
+		cmd, err := reports.Parse(root.Args()[1:])
+		if errors.Is(err, reports.ErrHelp) {
+			opts.help = true
+			return opts, nil
+		}
+		if err != nil {
+			return opts, errArgument
+		}
+		opts.reports = cmd
+		return opts, nil
 	case "sessions":
 		cmd, err := booking.Parse(root.Args()[1:])
 		if errors.Is(err, booking.ErrHelp) {
@@ -228,6 +259,10 @@ func (a App) result(data any, err error) int {
 }
 
 func (a App) failure(err error) int {
+	var reportFailure *reports.Failure
+	if errors.As(err, &reportFailure) {
+		return a.writeError(errorDetail{reportFailure.Code, reportFailure.Message}, 1)
+	}
 	var problem *booking.Failure
 	if errors.As(err, &problem) {
 		_ = json.NewEncoder(a.Out).Encode(map[string]any{"error": problem})
@@ -262,6 +297,8 @@ type errorDetail struct {
 
 func describeError(err error) (errorDetail, int) {
 	switch {
+	case errors.Is(err, reports.ErrNotFound):
+		return errorDetail{"REPORT_NOT_FOUND", err.Error()}, 1
 	case errors.Is(err, api.ErrBookingAPINotDeployed):
 		return errorDetail{"BOOKING_API_NOT_DEPLOYED", err.Error()}, 1
 	case errors.Is(err, api.ErrInvalidOrigin):
@@ -289,7 +326,7 @@ func describeError(err error) (errorDetail, int) {
 	case errors.Is(err, session.ErrBusy):
 		return errorDetail{"SESSION_BUSY", "Another command is using the session. Wait for it to finish."}, 1
 	case errors.Is(err, api.ErrInvalidResponse):
-		return errorDetail{"INVALID_API_RESPONSE", "SA2 returned an invalid authentication response."}, 1
+		return errorDetail{"INVALID_API_RESPONSE", "SA2 returned an invalid response."}, 1
 	case errors.Is(err, auth.ErrFeishuCallbackUnavailable):
 		return errorDetail{"CALLBACK_UNAVAILABLE", "Could not start the local Feishu browser callback."}, 1
 	case errors.Is(err, api.ErrUnavailable):

@@ -124,6 +124,7 @@ mkdir -p "$HOME/.agents/skills"
 ln -s "$PWD/skills/agent-cli-usage" "$HOME/.agents/skills/agent-cli-usage"
 ln -s "$PWD/skills/sa2-book-session" "$HOME/.agents/skills/sa2-book-session"
 ln -s "$PWD/skills/sa2-manage-session" "$HOME/.agents/skills/sa2-manage-session"
+ln -s "$PWD/skills/sa2-manage-monthly-report" "$HOME/.agents/skills/sa2-manage-monthly-report"
 ```
 
 在 Codex 中输入 `/skills` 查看列表，也可以显式调用：
@@ -207,3 +208,36 @@ sa2 sessions wait --request-id K --timeout 60s
 每次预览须为 `--out` 指定新文件名。预览被阻止时命令以非零状态退出，并报告阻止原因。成功的预览返回权益来源、日历及会议影响。确认前核对时区、备注可见性和权益。改期和取消同样需要生成计划。计划文件仅当前系统用户可读，绑定账号、origin、请求标识及有效期。业务提交超时后用原 requestId 执行 `sa2 sessions operation`，外部结果需要人工核对时保留原标识。
 
 Agent 指引见 [新预约](skills/sa2-book-session/SKILL.md) 和 [查看、改期与取消](skills/sa2-manage-session/SKILL.md)。
+
+## 月报查询与里程碑提取
+
+需要具有学生查询、月报读取权限的登录账号。以下 ID 为占位符。
+
+```sh
+sa2 sessions find --kind student --text '学生姓名'
+sa2 reports monthly get --student-id S --period 2026-11
+sa2 reports monthly latest --student-id S --section milestones
+sa2 reports monthly latest --student-id S --through 2026-11 --lookback 24 --section milestones
+```
+
+`latest` 从当前本地月份（或 `--through`）向前查找月份最近的已保存月报，默认含截止月回查 24 个月，可设为 1–120 个月；不按编辑时间排序，也不查询截止月份之后的月报。返回 `data.report` 和 `data.search`（from、through、checkedMonths）。`get` 返回 `data`。`--section milestones` 仅输出标识、月份、更新时间和里程碑数组。
+
+未生成月份的默认模板不作为已有月报返回；指定月份或搜索范围内没有记录时返回 `REPORT_NOT_FOUND`。认证、权限或连接失败会立即停止，不作为无月报处理。读取命令不生成或刷新月报。单项更新见下文。
+
+Agent 指引见 [月报查询](skills/sa2-manage-monthly-report/SKILL.md)。例如：“找到 francetest 学生本月及之前最近的已有月报，提取里程碑内容。”匹配多名学生时先确定目标。
+
+### 精准更新单个里程碑
+
+此功能需要目标环境部署单项 PATCH 接口。用 `schema` 查看随 CLI 打包的 OpenAPI 请求结构，无需登录：
+
+```sh
+sa2 reports monthly milestone schema
+sa2 reports monthly get --student-id S --period 2026-06 --section milestones
+sa2 reports monthly milestone update --student-id S --period 2026-06 --report-id R --key first_counselor_strategy_meeting --expected-updated-at 2026-08-05T23:18:49.843Z --notes-file notes.html
+```
+
+ID、key、时间为占位示例，必须使用 GET 返回的实际值。最后一条命令默认只读预览；在用户已授权具体变更后，原命令增加 `--confirm` 提交一次并回读核验。省略 `--status` 保留状态；省略备注选项保留备注；`--clear-notes` 明确清空，与 `--notes-file` 互斥。至少指定状态或备注。备注文件为 UTF-8 富文本 HTML（或不含标记的文本），上限 100000 个 UTF-16 单元；已有读取接口会修剪首尾空白。
+
+状态只支持 `not_started`、`done`、`on_track`、`needs_attention`、`at_risk`、`critical`，不接受 `—`。“系统默认”等含糊指令需由用户明确。只按已有且唯一的 key 更新，不改名称、排序，不创建或删除里程碑，不替换整个数组。
+
+版本或原数组在读取后有变化时返回 `STALE_REPORT`，需重新核对；不自动改版本重试。`MILESTONE_API_NOT_DEPLOYED` 表示需先部署 API，不回退旧 PUT。`UPDATE_OUTCOME_UNKNOWN` 表示可能已写入，先回读；`UPDATE_VERIFICATION_FAILED` 表示需要核对最终状态，不盲目重放。成功返回 `submitted=true`、`verified=true`、before/after 及回读版本。原网页整段 PUT 的并发行为未改变。
