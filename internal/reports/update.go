@@ -43,18 +43,25 @@ func readNotes(path string) (string, error) {
 	if err != nil || len(raw) > 400000 || !utf8.Valid(raw) {
 		return "", ErrArgument
 	}
+	if !validNotes(string(raw)) {
+		return "", ErrArgument
+	}
+	return string(raw), nil
+}
+
+func validNotes(value string) bool {
+	if !utf8.ValidString(value) {
+		return false
+	}
 	// Keep supplementary characters within the API length limit.
 	units := 0
-	for _, r := range string(raw) {
+	for _, r := range value {
 		units++
 		if r > 0xffff {
 			units++
 		}
 	}
-	if units > 100000 {
-		return "", ErrArgument
-	}
-	return string(raw), nil
+	return units <= 100000
 }
 
 func findMilestone(report map[string]any, key string) (map[string]any, error) {

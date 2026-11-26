@@ -58,7 +58,8 @@ func (c Client) Business(ctx context.Context, origin string, access []byte, meth
 	}
 	commit := path == "/api/services/session-bookings/commit"
 	milestonePatch := method == "PATCH" && strings.HasPrefix(path, "/api/reports/students/") && strings.Contains(path, "/monthly-service-reports/") && strings.Contains(path, "/milestones/")
-	uncertainWrite := commit || milestonePatch
+	milestoneCreate := method == "POST" && strings.HasPrefix(path, "/api/reports/students/") && strings.HasSuffix(path, "/milestones")
+	uncertainWrite := commit || milestonePatch || milestoneCreate
 	// Go may transparently replay requests carrying an idempotency key on a stale connection.
 	if uncertainWrite {
 		req.GetBody = nil
@@ -100,7 +101,7 @@ func (c Client) Business(ctx context.Context, origin string, access []byte, meth
 			(detail.Message == "Cannot "+method+" "+path || detail.Message == "Cannot "+method+" "+req.URL.RequestURI()) {
 			return ErrBookingAPINotDeployed
 		}
-		if milestonePatch && res.StatusCode == http.StatusNotFound && (detail.Message == "Cannot "+method+" "+path || detail.Message == "Cannot "+method+" "+req.URL.RequestURI()) {
+		if (milestonePatch || milestoneCreate) && res.StatusCode == http.StatusNotFound && (detail.Message == "Cannot "+method+" "+path || detail.Message == "Cannot "+method+" "+req.URL.RequestURI()) {
 			return &BusinessError{res.StatusCode, "MILESTONE_API_NOT_DEPLOYED"}
 		}
 		code := detail.Code

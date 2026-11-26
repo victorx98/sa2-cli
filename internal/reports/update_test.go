@@ -159,14 +159,65 @@ func TestParseUpdate(t *testing.T) {
 	if err := os.WriteFile(path, []byte("本月无相关内容"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	for _, flags := range [][]string{{"--notes-file", path}, {"--status", "done", "--confirm"}, {"--clear-notes"}} {
+	for _, flags := range [][]string{{"--notes", "本月完成目标"}, {"--notes-file", path}, {"--status", "done", "--confirm"}, {"--clear-notes"}} {
 		if _, err := Parse(append(append([]string{}, base...), flags...)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, flags := range [][]string{nil, {"--status", "—"}, {"--notes-file", path, "--clear-notes"}, {"--notes-file", "missing"}, {"--key", "../other", "--status", "done"}, {"--expected-updated-at", "2026-06-01", "--clear-notes"}} {
+	cmd, err := Parse(append(append([]string{}, base...), "--notes", "本月完成目标"))
+	if err != nil || cmd.Notes == nil || *cmd.Notes != "本月完成目标" {
+		t.Fatalf("inline notes: cmd=%+v err=%v", cmd, err)
+	}
+	for _, flags := range [][]string{nil, {"--status", "—"}, {"--notes", ""}, {"--notes", "  "}, {"--notes", "文案", "--notes-file", path}, {"--notes", "文案", "--clear-notes"}, {"--notes", strings.Repeat("😀", 50001)}, {"--notes-file", path, "--clear-notes"}, {"--notes-file", "missing"}, {"--key", "../other", "--status", "done"}, {"--expected-updated-at", "2026-06-01", "--clear-notes"}} {
 		if _, err := Parse(append(append([]string{}, base...), flags...)); !errors.Is(err, ErrArgument) {
 			t.Fatalf("flags=%v err=%v", flags, err)
 		}
+	}
+}
+
+func TestParseCreateMilestone(t *testing.T) {
+	base := []string{"monthly", "milestone", "create", "--student-id", studentID, "--report-id", reportID, "--period", "2026-06", "--expected-updated-at", stamp, "--status", "critical", "--name", "上课节点"}
+	cmd, err := Parse(append(append([]string{}, base...), "--notes", "测试"))
+	if err != nil || cmd.Action != "create" || cmd.Name != "上课节点" || cmd.Notes == nil || *cmd.Notes != "测试" {
+		t.Fatalf("create: cmd=%+v err=%v", cmd, err)
+	}
+	for _, flags := range [][]string{{"--status", "Critical1"}, {"--name", " "}, {"--clear-notes"}, {"--key", "mock_interview"}} {
+		if _, err := Parse(append(append([]string{}, base...), flags...)); !errors.Is(err, ErrArgument) {
+			t.Fatalf("flags=%v err=%v", flags, err)
+		}
+	}
+}
+
+func TestCreateMilestonePreviewAndConfirmation(t *testing.T) {
+	notes := "测试"
+	cmd := Command{Action: "create", StudentID: studentID, ReportID: reportID, Period: "2026-06", Name: "上课节点", ExpectedUpdatedAt: stamp, Status: "critical", Notes: &notes}
+	report := map[string]any{"id": reportID, "studentId": studentID, "reportPeriod": cmd.Period, "updatedAt": stamp,
+		"monthlyMilestonesSnapshot": []any{map[string]any{"key": "first_counselor_strategy_meeting", "status": "done"}}}
+	var methods []string
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		methods = append(methods, r.Method)
+		if r.Method == "POST" {
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Error(err)
+			}
+			if body["label"] != cmd.Name || body["status"] != cmd.Status || body["notes"] != notes {
+				t.Errorf("unexpected body: %v", body)
+			}
+			report["monthlyMilestonesSnapshot"] = append(report["monthlyMilestonesSnapshot"].([]any), map[string]any{"key": "custom_44444444-4444-4444-8444-444444444444", "label": cmd.Name, "status": cmd.Status, "notes": notes})
+			report["updatedAt"] = "2026-08-05T23:18:49.844Z"
+		}
+		_ = json.NewEncoder(w).Encode(report)
+	}))
+	defer server.Close()
+	client := Client{API: api.Client{HTTP: server.Client()}, Origin: server.URL, Token: []byte("synthetic")}
+	preview, err := client.Run(context.Background(), cmd)
+	if err != nil || preview.(map[string]any)["submitted"] != false || !reflect.DeepEqual(methods, []string{"GET"}) {
+		t.Fatalf("preview=%v err=%v methods=%v", preview, err, methods)
+	}
+	cmd.Confirm = true
+	result, err := client.Run(context.Background(), cmd)
+	if err != nil || result.(map[string]any)["verified"] != true || !reflect.DeepEqual(methods, []string{"GET", "GET", "POST", "GET"}) {
+		t.Fatalf("result=%v err=%v methods=%v", result, err, methods)
 	}
 }
