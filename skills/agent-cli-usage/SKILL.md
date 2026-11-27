@@ -32,4 +32,10 @@ description: Use the SuperAcademy sa2 CLI to check the signed-in identity, sign 
 | `3` | `LOGIN_REQUIRED` 表示会话缺失或无法确认续期结果。任务已授权且凭据可用时重新登录。 `AUTH_REJECTED` 时核对账号权限及登录方式。 |
 | `130` | `CANCELLED`，结束当前操作。 |
 
+## 预约操作错误
+
+- 先读 `error.code`。仅 `PLAN_BLOCKED` 需要再读 `error.blockers`。该响应的 `requestId` 属于本次预览，不能用于查询已有操作。业务阻断也可能直接作为 `error.code` 返回，按对应预约 skill 处置。
+- 提交结果不明时，用原 `requestId` 查 `sa2 sessions operation`。保留原编号，避免换键重发。外部会议同步失败或需人工时，同时保留 `sessionId`。
+- 遇到 `ORIGIN_MISMATCH` 或 `BOOKING_NOT_CONFIGURED`，报告环境和错误码，交环境维护者核对。`BOOKING_API_NOT_DEPLOYED` 时报告缺少的能力并保留已准备的信息。
+
 汇报时只使用公开身份字段或错误码。凭据由系统凭据库和 CLI 管理。
